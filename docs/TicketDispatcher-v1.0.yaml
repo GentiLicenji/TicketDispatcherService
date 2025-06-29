@@ -1,0 +1,287 @@
+swagger: "2.0"
+info:
+  version: "1.0"
+  title: "Pleased Ticketing System API"
+  description: "APIs for managing tickets in Pleased.com's internal ticketing system"
+  contact:
+    name: Gentian Licenji
+    email: dev@pleased.com
+
+host: "api.pleased.com"
+basePath: "/api/v1"
+schemes:
+  - https
+
+consumes:
+  - application/json
+produces:
+  - application/json
+
+securityDefinitions:
+  oauth2:
+    type: oauth2
+    flow: application
+    tokenUrl: https://auth.pleased.com/oauth/token
+    scopes:
+      read: Read access
+      write: Write access
+  jwt:
+    type: apiKey
+    name: Authorization
+    in: header
+
+security:
+  - jwt: []
+  - oauth2:
+      - read
+      - write
+
+parameters:
+  CommonRequestHeaders:
+    - name: Authorization
+      in: header
+      required: true
+      type: string
+      description: Bearer access token
+    - name: Content-Type
+      in: header
+      required: true
+      type: string
+      default: application/json
+    - name: Accept
+      in: header
+      required: true
+      type: string
+      default: application/json
+    - name: X-Correlation-ID
+      in: header
+      required: false
+      type: string
+    - name: Idempotency-Key
+      in: header
+      required: false
+      type: string
+    - name: User-Agent
+      in: header
+      required: false
+      type: string
+    - name: X-Request-ID
+      in: header
+      required: false
+      type: string
+
+responses:
+  CommonResponseHeaders:
+    description: Standard success response
+    headers:
+      Content-Type:
+        type: string
+        default: application/json
+      X-Correlation-ID:
+        type: string
+      Retry-After:
+        type: integer
+        default: 10
+      Cache-Control:
+        type: string
+        default: no-store
+
+paths:
+  /tickets:
+    post:
+      summary: Create a new ticket
+      operationId: createTicket
+      parameters:
+        - $ref: '#/parameters/CommonRequestHeaders/0'
+        - $ref: '#/parameters/CommonRequestHeaders/1'
+        - $ref: '#/parameters/CommonRequestHeaders/2'
+        - $ref: '#/parameters/CommonRequestHeaders/3'
+        - $ref: '#/parameters/CommonRequestHeaders/4'
+        - $ref: '#/parameters/CommonRequestHeaders/5'
+        - $ref: '#/parameters/CommonRequestHeaders/6'
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [subject, description, projectId]
+            properties:
+              subject:
+                type: string
+              description:
+                type: string
+              projectId:
+                type: integer
+      responses:
+        200:
+          description: Ticket created
+          schema:
+            $ref: "#/definitions/Ticket"
+          headers:
+            $ref: '#/responses/CommonResponseHeaders/headers'
+
+  /tickets/{ticketID}/assign:
+    post:
+      summary: Assign a ticket to a user
+      operationId: assignTicket
+      parameters:
+        - $ref: '#/parameters/CommonRequestHeaders/0'
+        - $ref: '#/parameters/CommonRequestHeaders/1'
+        - $ref: '#/parameters/CommonRequestHeaders/2'
+        - $ref: '#/parameters/CommonRequestHeaders/3'
+        - $ref: '#/parameters/CommonRequestHeaders/4'
+        - $ref: '#/parameters/CommonRequestHeaders/5'
+        - $ref: '#/parameters/CommonRequestHeaders/6'
+        - name: ticketID
+          in: path
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [ticketId, assigneeId]
+            properties:
+              ticketId:
+                type: string
+              assigneeId:
+                type: integer
+      responses:
+        200:
+          description: Ticket assigned
+          schema:
+            $ref: "#/definitions/TicketAssignment"
+          headers:
+            $ref: '#/responses/CommonResponseHeaders/headers'
+
+  /tickets/{ticketID}/status:
+    patch:
+      summary: Update the status of a ticket
+      operationId: updateTicketStatus
+      parameters:
+        - $ref: '#/parameters/CommonRequestHeaders/0'
+        - $ref: '#/parameters/CommonRequestHeaders/1'
+        - $ref: '#/parameters/CommonRequestHeaders/2'
+        - $ref: '#/parameters/CommonRequestHeaders/3'
+        - $ref: '#/parameters/CommonRequestHeaders/4'
+        - $ref: '#/parameters/CommonRequestHeaders/5'
+        - $ref: '#/parameters/CommonRequestHeaders/6'
+        - name: ticketID
+          in: path
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+      responses:
+        200:
+          description: Status updated
+          schema:
+            type: object
+            properties:
+              ticketId:
+                type: string
+              status:
+                type: string
+              updatedAt:
+                type: string
+                format: date-time
+          headers:
+            $ref: '#/responses/CommonResponseHeaders/headers'
+
+  /tickets/{ticketID}/details:
+    patch:
+      summary: Update ticket details
+      operationId: updateTicketDetails
+      parameters:
+        - $ref: '#/parameters/CommonRequestHeaders/0'
+        - $ref: '#/parameters/CommonRequestHeaders/1'
+        - $ref: '#/parameters/CommonRequestHeaders/2'
+        - $ref: '#/parameters/CommonRequestHeaders/3'
+        - $ref: '#/parameters/CommonRequestHeaders/4'
+        - $ref: '#/parameters/CommonRequestHeaders/5'
+        - $ref: '#/parameters/CommonRequestHeaders/6'
+        - name: ticketID
+          in: path
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              subject:
+                type: string
+              description:
+                type: string
+              priority:
+                type: string
+                enum: [low, medium, high, urgent]
+              notify:
+                type: boolean
+              dueDate:
+                type: string
+                format: date
+      responses:
+        200:
+          description: Ticket updated
+          schema:
+            $ref: "#/definitions/Ticket"
+          headers:
+            $ref: '#/responses/CommonResponseHeaders/headers'
+
+definitions:
+  Ticket:
+    type: object
+    properties:
+      ticketId:
+        type: string
+      subject:
+        type: string
+      description:
+        type: string
+      projectId:
+        type: integer
+      status:
+        type: string
+        enum: [open, in_progress, closed]
+      priority:
+        type: string
+        enum: [low, medium, high, urgent]
+      notify:
+        type: boolean
+      dueDate:
+        type: string
+        format: date
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+
+  TicketAssignment:
+    type: object
+    properties:
+      ticketId:
+        type: string
+      assignee:
+        type: object
+        properties:
+          userId:
+            type: integer
+          name:
+            type: string
+          role:
+            type: string
+      assignedAt:
+        type: string
+        format: date-time
