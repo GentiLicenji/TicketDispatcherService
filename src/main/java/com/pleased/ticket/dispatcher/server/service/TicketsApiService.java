@@ -34,77 +34,61 @@ public class TicketsApiService {
      * Create a new ticket
      */
     public Mono<TicketAPIResponse> createTicket(TicketCreateAPIRequest request) {
-        return Mono.fromCallable(() -> {
-                    // Validate request
-                    if (request.getSubject() == null || request.getIdempotencyKey() == null) {
-                        throw new IllegalArgumentException("Title and IdempotencyKey are required");
-                    }
 
-                    UUID ticketId = request.getIdempotencyKey();
-                    log.info("Creating ticket {} with title: {}", ticketId, request.getSubject());
+        UUID ticketId = request.getIdempotencyKey();
+        log.info("Creating ticket {} with title: {}", ticketId, request.getSubject());
 
-                    // Create and return fast response
-                    TicketAPIResponse response = new TicketAPIResponse();
-                    response.setTicketID(ticketId);
-                    response.setSubject(request.getSubject());
-                    response.setDescription(request.getDescription());
-                    response.setUserId(request.getUserId());
-                    response.setProjectId(request.getProjectId());
-                    response.setStatus(TicketStatusEnum.OPEN.toString());
-                    response.setCreatedAt(OffsetDateTime.now());
-                    return response;
-                })
-                .flatMap(response -> {
-                    // Publish event
-                    TicketCreated event = TicketCreated.builder()
-                            .ticketId(response.getTicketID())
-                            .subject(request.getSubject())
-                            .description(request.getDescription())
-                            .userId(request.getUserId())
-                            .correlationId(request.getCorrelationID())
-                            .eventId(request.getIdempotencyKey())
-                            .build();
+        // Create and return fast response
+        TicketAPIResponse response = new TicketAPIResponse();
+        response.setTicketID(ticketId);
+        response.setSubject(request.getSubject());
+        response.setDescription(request.getDescription());
+        response.setUserId(request.getUserId());
+        response.setProjectId(request.getProjectId());
+        response.setStatus(TicketStatusEnum.OPEN.toString());
+        response.setCreatedAt(OffsetDateTime.now());
 
-                    return eventPublisher.publishTicketCreated(event)
-                            .then(Mono.just(response));
-                })
-                .doOnError(error -> log.error("Failed to create ticket with title: {}", request.getSubject(), error));
+        //Create event with timestamp
+        TicketCreated event = TicketCreated.builder()
+                .ticketId(response.getTicketID())
+                .subject(request.getSubject())
+                .description(request.getDescription())
+                .userId(request.getUserId())
+                .correlationId(request.getCorrelationID())
+                .eventId(request.getIdempotencyKey())
+                .createdAt(response.getCreatedAt())
+                .build();
+
+        return eventPublisher.publishTicketCreated(event)
+                .doOnError(error -> log.error("Failed to create ticket with title: {}", request.getSubject(), error))
+                .then(Mono.just(response));
     }
 
     /**
      * Assign a ticket to a user.
      */
     public Mono<TicketAssignmentAPIResponse> assignTicket(TicketAssignmentAPIRequest request) {
-        return Mono.fromCallable(() -> {
-                    // Validate request
-                    if (request.getTicketID() == null || request.getAssigneeId() == null) {
-                        throw new IllegalArgumentException("TicketID and AssigneeId are required");
-                    }
 
-                    log.info("Assigning ticket {} to user {}", request.getTicketID(), request.getAssigneeId());
+        log.info("Assigning ticket {} to user {}", request.getTicketID(), request.getAssigneeId());
 
-                    // Create and return fast response
-                    TicketAssignmentAPIResponse response = new TicketAssignmentAPIResponse();
-                    response.setTicketID(request.getTicketID());
-                    response.setAssigneeId(request.getAssigneeId());
-                    response.setAssignedAt(OffsetDateTime.now());
-                    return response;
-                })
-                .flatMap(response -> {
-                    // Publish event
-                    TicketAssigned event = TicketAssigned.builder()
-                            .ticketId(request.getTicketID())
-                            .assigneeId(request.getAssigneeId())
-                            .assignedAt(response.getAssignedAt())
-                            .correlationId(request.getCorrelationID())
-                            .eventId(request.getIdempotencyKey())
+        // Create and return fast response
+        TicketAssignmentAPIResponse response = new TicketAssignmentAPIResponse();
+        response.setTicketID(request.getTicketID());
+        response.setAssigneeId(request.getAssigneeId());
+        response.setAssignedAt(OffsetDateTime.now());
+
+        // Publish event
+        TicketAssigned event = TicketAssigned.builder()
+                .ticketId(request.getTicketID())
+                .assigneeId(request.getAssigneeId())
+                .assignedAt(response.getAssignedAt())
+                .correlationId(request.getCorrelationID())
+                .eventId(request.getIdempotencyKey())
 //                            .eventVersion(TicketEventProducer.eventVersion)TODO: supposed to handle multi schema
-                            .build();
-
-                    return eventPublisher.publishTicketAssigned(event)
-                            .then(Mono.just(response));
-                })
-                .doOnError(error -> log.error("Failed to assign ticket {}", request.getTicketID(), error));
+                .build();
+        return eventPublisher.publishTicketAssigned(event)
+                .doOnError(error -> log.error("Failed to assign ticket {}", request.getTicketID(), error))
+                .then(Mono.just(response));
     }
 
 
@@ -112,33 +96,25 @@ public class TicketsApiService {
      * Update ticket status
      */
     public Mono<TicketStatusAPIResponse> updateTicketStatus(TicketStatusAPIRequest request) {
-        return Mono.fromCallable(() -> {
-                    // Validate request
-                    if (request.getTicketID() == null || request.getStatus() == null) {
-                        throw new IllegalArgumentException("TicketID and Status are required");
-                    }
 
-                    log.info("Updating ticket {} status to: {}", request.getTicketID(), request.getStatus());
+        log.info("Updating ticket {} status to: {}", request.getTicketID(), request.getStatus());
 
-                    // Create and return fast response
-                    TicketStatusAPIResponse response = new TicketStatusAPIResponse();
-                    response.setTicketID(request.getTicketID());
-                    response.setStatus(request.getStatus());
-                    response.setUpdatedAt(OffsetDateTime.now());
-                    return response;
-                })
-                .flatMap(response -> {
-                    // Publish event
-                    TicketStatusUpdated event = TicketStatusUpdated.builder()
-                            .status(request.getStatus())
-                            .ticketId(request.getTicketID())
-                            .correlationId(request.getCorrelationID())
-                            .eventId(request.getIdempotencyKey())
-                            .build();
+        // Create and return fast response
+        TicketStatusAPIResponse response = new TicketStatusAPIResponse();
+        response.setTicketID(request.getTicketID());
+        response.setStatus(request.getStatus());
+        response.setUpdatedAt(OffsetDateTime.now());
 
-                    return eventPublisher.publishTicketStatusUpdated(event)
-                            .then(Mono.just(response));
-                })
-                .doOnError(error -> log.error("Failed to update ticket {} status", request.getTicketID(), error));
+        TicketStatusUpdated event = TicketStatusUpdated.builder()
+                .status(request.getStatus())
+                .ticketId(request.getTicketID())
+                .correlationId(request.getCorrelationID())
+                .eventId(request.getIdempotencyKey())
+                .updatedAt(response.getUpdatedAt())
+                .build();
+
+        return eventPublisher.publishTicketStatusUpdated(event)
+                .doOnError(error -> log.error("Failed to update ticket {} status", request.getTicketID(), error))
+                .then(Mono.just(response));
     }
 }
