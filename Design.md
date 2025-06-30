@@ -140,6 +140,10 @@ As derived by the requirements document. User should be able to:
 The designs were fed into ChatGPT to generate the OpenAPI v2 schema file [TicketDispatcher-v1.0.yaml](docs/TicketDispatcher-v1.0.yaml). 
 <br>The schemas generated had unresolved references and were fixed/enhanced appropriately.
 
+Below is the data model design:
+![data-models.png](docs/data-model-design.png)
+The designs were fed into ChatGPT to generate DB entities and repositories.
+
 ### 1.4 Design decision and impacts for the task.
 
 #### 1.4.1 JDK choice
