@@ -7,8 +7,6 @@ import com.pleased.ticket.dispatcher.server.model.rest.*;
 import com.pleased.ticket.dispatcher.server.service.TicketsApiService;
 import com.pleased.ticket.dispatcher.server.util.mapper.TicketsMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
@@ -26,39 +24,29 @@ public class TicketsDelegate {
         this.ticketsMapper = ticketsMapper;
     }
 
-    public Mono<ResponseEntity<TicketResponse>> createTicket(
+    public Mono<TicketResponse> createTicket(
             TicketCreateRequest restRequest,
             String authorization,
             String xCorrelationID,
             String idempotencyKey,
             String userAgent) {
 
-        return Mono.fromCallable(() -> {
-                    // Map REST request to API request
-                    TicketCreateAPIRequest apiRequest = ticketsMapper.fromRestToAPICreateRequest(restRequest);
+        //Perform validation
 
-                    // Set additional context information
-                    apiRequest.setAuthorization(authorization);
-                    apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
-                    apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
-                    apiRequest.setUserAgent(userAgent);
+        // Map REST request to API request
+        TicketCreateAPIRequest apiRequest = ticketsMapper.fromRestToAPICreateRequest(restRequest);
 
-                    return apiRequest;
-                })
-                .flatMap(ticketsApiService::createTicket)
-                .map(apiResponse -> {
-                    // Map API response back to REST response
-                    TicketResponse restResponse = ticketsMapper.fromAPIToRestTicketResponse(apiResponse);
-                    return new ResponseEntity<>(restResponse, HttpStatus.CREATED);
-                })
-                .onErrorMap(throwable -> {
-                    // Handle and wrap exceptions appropriately
-                    System.err.println("Error in createTicket: " + throwable.getMessage());
-                    return throwable;
-                });
+        // Set additional context information
+        apiRequest.setAuthorization(authorization);
+        apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
+        apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
+        apiRequest.setUserAgent(userAgent);
+
+        return ticketsApiService.createTicket(apiRequest)
+                .map(ticketsMapper::fromAPIToRestTicketResponse);
     }
 
-    public Mono<ResponseEntity<TicketAssignmentResponse>> assignTicket(
+    public Mono<TicketAssignmentResponse> assignTicket(
             TicketAssignmentRequest restRequest,
             String authorization,
             String ticketID,
@@ -66,30 +54,20 @@ public class TicketsDelegate {
             String idempotencyKey,
             String userAgent) {
 
-        return Mono.fromCallable(() -> {
-                    // Map REST request to API request
-                    TicketAssignmentAPIRequest apiRequest = ticketsMapper.fromRestToAPIAssignmentRequest(restRequest);
+        //Perform validation
 
-                    // Set additional context information
-                    apiRequest.setTicketID(UUID.fromString(ticketID));
-                    apiRequest.setAuthorization(authorization);
-                    apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
-                    apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
-                    apiRequest.setUserAgent(userAgent);
+        // Map REST request to API request
+        TicketAssignmentAPIRequest apiRequest = ticketsMapper.fromRestToAPIAssignmentRequest(restRequest);
 
-                    return apiRequest;
-                })
-                .flatMap(apiRequest -> ticketsApiService.assignTicket(apiRequest))
-                .map(apiResponse -> {
-                    // Map API response back to REST response
-                    TicketAssignmentResponse restResponse = ticketsMapper.fromAPIToRestAssignmentResponse(apiResponse);
-                    return new ResponseEntity<>(restResponse, HttpStatus.OK);
-                })
-                .onErrorMap(throwable -> {
-                    // Handle and wrap exceptions appropriately
-                    System.err.println("Error in assignTicket: " + throwable.getMessage());
-                    return throwable;
-                });
+        // Set additional context information
+        apiRequest.setTicketID(UUID.fromString(ticketID));
+        apiRequest.setAuthorization(authorization);
+        apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
+        apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
+        apiRequest.setUserAgent(userAgent);
+
+        return ticketsApiService.assignTicket(apiRequest)
+                .map(ticketsMapper::fromAPIToRestAssignmentResponse);
     }
 
 //    public Mono<ResponseEntity<TicketResponse>> updateTicketDetails(
@@ -126,7 +104,7 @@ public class TicketsDelegate {
 //                });
 //    }
 
-    public Mono<ResponseEntity<TicketStatusResponse>> updateTicketStatus(
+    public Mono<TicketStatusResponse> updateTicketStatus(
             TicketStatusRequest restRequest,
             String authorization,
             String ticketID,
@@ -134,29 +112,17 @@ public class TicketsDelegate {
             String idempotencyKey,
             String userAgent) {
 
-        return Mono.fromCallable(() -> {
-                    // Map REST request to API request
-                    TicketStatusAPIRequest apiRequest = ticketsMapper.fromRestToAPIStatusRequest(restRequest);
+        // Map REST request to API request
+        TicketStatusAPIRequest apiRequest = ticketsMapper.fromRestToAPIStatusRequest(restRequest);
 
-                    // Set additional context information
-                    apiRequest.setTicketID(UUID.fromString(ticketID));
-                    apiRequest.setAuthorization(authorization);
-                    apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
-                    apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
-                    apiRequest.setUserAgent(userAgent);
+        // Set additional context information
+        apiRequest.setTicketID(UUID.fromString(ticketID));
+        apiRequest.setAuthorization(authorization);
+        apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
+        apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
+        apiRequest.setUserAgent(userAgent);
 
-                    return apiRequest;
-                })
-                .flatMap(apiRequest -> ticketsApiService.updateTicketStatus(apiRequest))
-                .map(apiResponse -> {
-                    // Map API response back to REST response
-                    TicketStatusResponse restResponse = ticketsMapper.fromAPIToRestStatusResponse(apiResponse);
-                    return new ResponseEntity<>(restResponse, HttpStatus.OK);
-                })
-                .onErrorMap(throwable -> {
-                    // Handle and wrap exceptions appropriately
-                    System.err.println("Error in updateTicketStatus: " + throwable.getMessage());
-                    return throwable;
-                });
+        return ticketsApiService.updateTicketStatus(apiRequest)
+                .map(ticketsMapper::fromAPIToRestStatusResponse);
     }
 }
