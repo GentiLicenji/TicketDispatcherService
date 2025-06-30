@@ -1,0 +1,311 @@
+swagger: "2.0"
+info:
+  version: "1.0"
+  title: "Pleased Ticketing System API"
+  description: "APIs for managing tickets in Pleased.com's internal ticketing system"
+  contact:
+    name: Gentian Licenji
+    email: glicenji@pleased.com
+
+host: "api.pleased.com"
+basePath: "/api/v1"
+schemes:
+  - https
+
+consumes:
+  - application/json
+produces:
+  - application/json
+
+securityDefinitions:
+  oauth2:
+    type: oauth2
+    flow: application
+    tokenUrl: https://auth.pleased.com/oauth/token
+    scopes:
+      read: Read access
+      write: Write access
+  jwt:
+    type: apiKey
+    name: Authorization
+    in: header
+
+security:
+  - jwt: [ ]
+  - oauth2:
+      - read
+      - write
+
+parameters:
+  Authorization:
+    name: Authorization
+    in: header
+    required: true
+    type: string
+    description: Bearer access token
+  X-Correlation-ID:
+    name: X-Correlation-ID
+    in: header
+    required: false
+    type: string
+  Idempotency-Key:
+    name: Idempotency-Key
+    in: header
+    required: false
+    type: string
+  User-Agent:
+    name: User-Agent
+    in: header
+    required: false
+    type: string
+tags:
+  - name: "Tickets"
+    description: "Group of APIs providing ticket operations."
+    externalDocs:
+      description: "Find out more about our APIs"
+      url: "http://pleased.com"
+paths:
+  /tickets:
+    post:
+      tags:
+        - "Tickets"
+      summary: Create a new ticket
+      operationId: createTicket
+      parameters:
+        - $ref: '#/parameters/Authorization'
+        - $ref: '#/parameters/X-Correlation-ID'
+        - $ref: '#/parameters/Idempotency-Key'
+        - $ref: '#/parameters/User-Agent'
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/TicketCreateRequest"
+      responses:
+        200:
+          description: Ticket created
+          schema:
+            $ref: "#/definitions/TicketResponse"
+          headers:
+            Content-Type:
+              type: string
+              default: application/json
+            X-Correlation-ID:
+              type: string
+            Retry-After:
+              type: integer
+              default: 10
+            Cache-Control:
+              type: string
+              default: no-store
+
+  /tickets/{ticketID}/assign:
+    post:
+      tags:
+        - "Tickets"
+      summary: Assign a ticket to a user
+      operationId: assignTicket
+      parameters:
+        - $ref: '#/parameters/Authorization'
+        - $ref: '#/parameters/X-Correlation-ID'
+        - $ref: '#/parameters/Idempotency-Key'
+        - $ref: '#/parameters/User-Agent'
+        - name: ticketID
+          in: path
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/TicketAssignmentRequest'
+      responses:
+        200:
+          description: Ticket assigned
+          schema:
+            $ref: "#/definitions/TicketAssignmentResponse"
+          headers:
+            Content-Type:
+              type: string
+              default: application/json
+            X-Correlation-ID:
+              type: string
+            Retry-After:
+              type: integer
+              default: 10
+            Cache-Control:
+              type: string
+              default: no-store
+
+  /tickets/{ticketID}/status:
+    patch:
+      tags:
+        - "Tickets"
+      summary: Update the status of a ticket
+      operationId: updateTicketStatus
+      parameters:
+        - $ref: '#/parameters/Authorization'
+        - $ref: '#/parameters/X-Correlation-ID'
+        - $ref: '#/parameters/Idempotency-Key'
+        - $ref: '#/parameters/User-Agent'
+        - name: ticketID
+          in: path
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/TicketStatusRequest'
+      responses:
+        200:
+          description: Status updated
+          schema:
+            $ref: '#/definitions/TicketStatusResponse'
+          headers:
+            Content-Type:
+              type: string
+              default: application/json
+            X-Correlation-ID:
+              type: string
+            Retry-After:
+              type: integer
+              default: 10
+            Cache-Control:
+              type: string
+              default: no-store
+
+  /tickets/{ticketID}/details:
+    patch:
+      tags:
+        - "Tickets"
+      summary: Update ticket details
+      operationId: updateTicketDetails
+      parameters:
+        - $ref: '#/parameters/Authorization'
+        - $ref: '#/parameters/X-Correlation-ID'
+        - $ref: '#/parameters/Idempotency-Key'
+        - $ref: '#/parameters/User-Agent'
+        - name: ticketID
+          in: path
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/TicketDetailsRequest'
+      responses:
+        200:
+          description: Ticket updated
+          schema:
+            $ref: "#/definitions/TicketResponse"
+          headers:
+            Content-Type:
+              type: string
+              default: application/json
+            X-Correlation-ID:
+              type: string
+            Retry-After:
+              type: integer
+              default: 10
+            Cache-Control:
+              type: string
+              default: no-store
+
+definitions:
+  TicketCreateRequest:
+    type: object
+    required: [ subject, description, projectId ]
+    properties:
+      subject:
+        type: string
+      description:
+        type: string
+      projectId:
+        type: string
+  TicketResponse:
+    type: object
+    properties:
+      ticketId:
+        type: string
+      subject:
+        type: string
+      description:
+        type: string
+      projectId:
+        type: string
+      status:
+        type: string
+        enum: [ open, in_progress, closed ]
+      priority:
+        type: string
+        enum: [ low, medium, high, urgent ]
+      notify:
+        type: boolean
+      dueDate:
+        type: string
+        format: date
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+
+  TicketAssignmentResponse:
+    type: object
+    properties:
+      ticketId:
+        type: string
+      assignee:
+        type: object
+        properties:
+          userId:
+            type: integer
+          name:
+            type: string
+          role:
+            type: string
+      assignedAt:
+        type: string
+        format: date-time
+  TicketDetailsRequest:
+    type: object
+    properties:
+      subject:
+        type: string
+      description:
+        type: string
+      priority:
+        type: string
+        enum: [ low, medium, high, urgent ]
+      notify:
+        type: boolean
+      dueDate:
+        type: string
+        format: date
+  TicketStatusResponse:
+    type: object
+    properties:
+      ticketId:
+        type: string
+      status:
+        type: string
+      updatedAt:
+        type: string
+        format: date-time
+  TicketAssignmentRequest:
+    type: object
+    required: [ ticketId, assigneeId ]
+    properties:
+      ticketId:
+        type: string
+      assigneeId:
+        type: string
+  TicketStatusRequest:
+    type: object
+    required: [ status ]
+    properties:
+      status:
+        type: string
