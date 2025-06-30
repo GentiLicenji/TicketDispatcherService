@@ -191,11 +191,22 @@ This enables consistent correlation between API requests, Kafka events, database
 - Server will always propagate it downstream (Kafka, logs, responses).
 
 #### 1.4.4 Webflux (Reactive) vs traditional Async(thread-based concurrency)
+(Source:Claude 4.0)
 ```REST API (WebFlux) → Kafka → Consumer Service (Traditional or Reactive)```
-- REST API Layer: Use WebFlux for maximum throughput and minimal resource usage.
-- Consumer Layer: Can use traditional Spring Boot since it's processing events sequentially anyway.
-This gives us the best of both worlds - high-performance API layer and simple, reliable event processing.
 
+**Non-blocking I/O**:
+- WebFlux uses event loops with far fewer threads (typically 2x CPU cores)
+- Spring MVC blocks threads during Kafka publishing - you need thread pools sized for peak concurrent requests
+- For 1000 concurrent requests: WebFlux uses ~8-16 threads, MVC needs ~1000 threads
+
+**Memory Efficiency**:
+- Each blocked thread in MVC consumes ~1MB stack space
+- WebFlux shares threads across all requests
+- 1000 concurrent: WebFlux ~16MB vs MVC ~1GB thread overhead
+
+**Backpressure Handling**:
+- WebFlux naturally handles slow Kafka brokers without blocking request threads
+- MVC threads get stuck waiting, causing cascade failures under load
 
 
 ## Reference and links
