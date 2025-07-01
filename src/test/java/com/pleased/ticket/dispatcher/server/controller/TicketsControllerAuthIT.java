@@ -79,7 +79,7 @@ public class TicketsControllerAuthIT {
     }
 
     @Test
-    void testEndpointWithValidToken() throws JOSEException {
+    void testEndpointWithValidToken_shouldReturnOK() throws JOSEException {
         String token = generateValidJwt();
 
         TicketCreateRequest request = new TicketCreateRequest();
@@ -99,7 +99,7 @@ public class TicketsControllerAuthIT {
     }
 
     @Test
-    void testEndpointWithInvalidToken() {
+    void testEndpointWithInvalidToken_shouldFailWithUnAuth() {
         String token = generateInvalidJwt();
 
         TicketCreateRequest request = new TicketCreateRequest();
@@ -117,7 +117,7 @@ public class TicketsControllerAuthIT {
     }
 
     @Test
-    void testEndpointWithoutToken() {
+    void testEndpointWithoutToken_shouldFailWithUnAuth() {
         TicketCreateRequest request = new TicketCreateRequest();
         request.setSubject("Test Ticket");
         request.setDescription("This is a test ticket");
@@ -137,7 +137,7 @@ public class TicketsControllerAuthIT {
                 .subject("test-user")
                 .claim("scope", "read write")
                 .issueTime(new Date())
-                .expirationTime(new Date(System.currentTimeMillis() + 3600 * 1000)) // 1 hour
+                .expirationTime(new Date(System.currentTimeMillis() + 3600 * 1000 * 5)) // 5 hours
                 .build();
 
         // Create HMAC signer
