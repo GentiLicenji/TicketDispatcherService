@@ -1,5 +1,6 @@
 package com.pleased.ticket.dispatcher.server.service;
 
+import com.pleased.ticket.dispatcher.server.config.KafkaTopicConfig;
 import com.pleased.ticket.dispatcher.server.model.events.TicketAssigned;
 import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
 import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
@@ -16,25 +17,20 @@ public class TicketEventProducer {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public static final int eventVersion=1;//TODO: figure out versioning maybe remove?
-    private static final String TICKET_CREATE_TOPIC = "ticket-create.v1";
-    private static final String TICKET_ASSIGNMENTS_TOPIC = "ticket-assignments.v1";
-    private static final String TICKET_UPDATES_TOPIC = "ticket-updates.v1";
-
     public TicketEventProducer(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
     public Mono<Void> publishTicketCreated(TicketCreated event) {
-        return publishEvent(TICKET_CREATE_TOPIC, event.getTicketId(), event);
+        return publishEvent(KafkaTopicConfig.TICKET_CREATE_TOPIC, event.getTicketId(), event);
     }
 
     public Mono<Void> publishTicketAssigned(TicketAssigned event) {
-        return publishEvent(TICKET_ASSIGNMENTS_TOPIC, event.getTicketId(), event);
+        return publishEvent(KafkaTopicConfig.TICKET_ASSIGNMENTS_TOPIC, event.getTicketId(), event);
     }
 
     public Mono<Void> publishTicketStatusUpdated(TicketStatusUpdated event) {
-        return publishEvent(TICKET_UPDATES_TOPIC, event.getTicketId(), event);
+        return publishEvent(KafkaTopicConfig.TICKET_UPDATES_TOPIC, event.getTicketId(), event);
     }
 
     private Mono<Void> publishEvent(String topic, UUID key, Object event) {
@@ -44,5 +40,6 @@ public class TicketEventProducer {
                 .onErrorMap(ex -> new RuntimeException("Failed to publish event", ex))
                 .then();
     }
+
 }
 
