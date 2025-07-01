@@ -18,8 +18,8 @@ import reactor.core.publisher.Mono;
 
 import java.time.OffsetDateTime;
 
-@Service
 @Slf4j
+@Service
 @KafkaListener(topics = {"ticket-create.v1", "ticket-assignments.v1", "ticket-updates.v1"})
 public class TicketEventConsumer {
 
@@ -119,34 +119,7 @@ public class TicketEventConsumer {
                 .doOnError(error -> log.error("Failed to update ticket status: {}", event.getTicketId(), error))
                 .then();
     }
-
-    private Integer parsePriority(String priority) {
-        if (priority == null || priority.trim().isEmpty()) {
-            return null;
-        }
-
-        try {
-            // Handle common priority formats
-            switch (priority.toUpperCase()) {
-                case "LOW":
-                    return 1;
-                case "MEDIUM":
-                    return 2;
-                case "HIGH":
-                    return 3;
-                case "URGENT":
-                    return 4;
-                case "CRITICAL":
-                    return 5;
-                default:
-                    // Try to parse as integer
-                    return Integer.parseInt(priority);
-            }
-        } catch (NumberFormatException e) {
-            log.warn("Unable to parse priority: {}, defaulting to null", priority);
-            return null;
-        }
-    }
+    //TODO: After implementing ticket detail update API we can map priority and other fields!
 }
 
 

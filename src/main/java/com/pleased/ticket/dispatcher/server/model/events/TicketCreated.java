@@ -6,7 +6,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
@@ -20,7 +20,7 @@ public class TicketCreated extends TicketEvent {
     private String description;
     private UUID userId;
     private UUID projectId;
-    private Instant createdAt;
+    private OffsetDateTime createdAt;
 }
 
 
