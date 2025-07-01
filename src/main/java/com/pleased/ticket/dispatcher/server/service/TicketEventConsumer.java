@@ -35,7 +35,7 @@ public class TicketEventConsumer {
             groupId = "ticket-service-create-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional
+    @Transactional(transactionManager = "kafkaTransactionManager")
     public Mono<Void> handleTicketCreated(
             @Payload TicketCreated event,
             @Header("kafka_receivedTopic") String topic,
@@ -68,7 +68,7 @@ public class TicketEventConsumer {
             groupId = "ticket-service-assignment-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional
+    @Transactional(transactionManager = "kafkaTransactionManager")
     public Mono<Void> handleTicketAssigned(
             @Payload TicketAssigned event,
             @Header("kafka_receivedTopic") String topic,
@@ -81,9 +81,11 @@ public class TicketEventConsumer {
         return ticketRepository.findById(event.getTicketId())
                 .switchIfEmpty(Mono.error(new EntityNotFoundException("Ticket not found: " + event.getTicketId())))
                 .flatMap(ticket -> {
-                    ticket.setTicketId(event.getTicketId());
                     ticket.setAssigneeId(event.getAssigneeId());
                     ticket.setUpdatedAt(event.getAssignedAt());
+
+                    // Mark as not new since we're updating
+                    ticket.setNew(false);
                     return ticketRepository.save(ticket);
                 })
                 .doOnSuccess(updated -> log.info("Successfully assigned ticket: {} to user: {}",
@@ -97,7 +99,7 @@ public class TicketEventConsumer {
             groupId = "ticket-service-update-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional
+    @Transactional(transactionManager = "kafkaTransactionManager")
     public Mono<Void> handleTicketStatusUpdated(
             @Payload TicketStatusUpdated event,
             @Header("kafka_receivedTopic") String topic,
@@ -112,6 +114,9 @@ public class TicketEventConsumer {
                 .flatMap(ticket -> {
                     ticket.setStatus(event.getStatus().toUpperCase());
                     ticket.setUpdatedAt(event.getUpdatedAt());
+
+                    // Mark as not new since we're updating
+                    ticket.setNew(false);
                     return ticketRepository.save(ticket);
                 })
                 .doOnSuccess(updated -> log.info("Successfully updated ticket status: {} to {}",
