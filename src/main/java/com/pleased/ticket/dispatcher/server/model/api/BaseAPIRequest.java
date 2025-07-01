@@ -11,7 +11,6 @@ import java.util.UUID;
 @Getter
 @Setter
 public abstract class BaseAPIRequest {
-    private String authorization;
     private UUID correlationID;
     private UUID idempotencyKey;
     private String userAgent;

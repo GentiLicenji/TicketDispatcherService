@@ -23,6 +23,7 @@ public interface TicketsMapper {
     @Mapping(source = "projectId", target = "projectId", qualifiedByName = "stringToUUID")
     TicketCreateAPIRequest fromRestToAPICreateRequest(TicketCreateRequest restRequest);
     @Mapping(source = "projectId", target = "projectId", qualifiedByName = "uuidToString")
+    @Mapping(source = "ticketID", target = "ticketId", qualifiedByName = "uuidToString")
     TicketResponse fromAPIToRestTicketResponse(TicketAPIResponse apiResponse);
 
     // Status mapping methods

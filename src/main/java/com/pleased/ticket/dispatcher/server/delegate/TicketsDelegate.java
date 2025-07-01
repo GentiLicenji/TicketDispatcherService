@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @Component
@@ -31,13 +32,15 @@ public class TicketsDelegate {
             String idempotencyKey,
             String userAgent) {
 
-        //Perform validation
 
         // Map REST request to API request
         TicketCreateAPIRequest apiRequest = ticketsMapper.fromRestToAPICreateRequest(restRequest);
 
+        //TODO: Derive userID from jwt sub field by decoding auth header.
+//        Ideally should be derived from the authPrinciple in a security filter.
+//        apiRequest.setUserId(extractUserID(authorization));
+
         // Set additional context information
-        apiRequest.setAuthorization(authorization);
         apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
         apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
         apiRequest.setUserAgent(userAgent);
@@ -48,20 +51,16 @@ public class TicketsDelegate {
 
     public Mono<TicketAssignmentResponse> assignTicket(
             TicketAssignmentRequest restRequest,
-            String authorization,
             String ticketID,
             String xCorrelationID,
             String idempotencyKey,
             String userAgent) {
-
-        //Perform validation
 
         // Map REST request to API request
         TicketAssignmentAPIRequest apiRequest = ticketsMapper.fromRestToAPIAssignmentRequest(restRequest);
 
         // Set additional context information
         apiRequest.setTicketID(UUID.fromString(ticketID));
-        apiRequest.setAuthorization(authorization);
         apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
         apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
         apiRequest.setUserAgent(userAgent);
@@ -70,43 +69,32 @@ public class TicketsDelegate {
                 .map(ticketsMapper::fromAPIToRestAssignmentResponse);
     }
 
-//    public Mono<ResponseEntity<TicketResponse>> updateTicketDetails(
-//            TicketDetailsRequest restRequest,
-//            String authorization,
-//            String ticketID,
-//            String xCorrelationID,
-//            String idempotencyKey,
-//            String userAgent) {
-//
-//        return Mono.fromCallable(() -> {
-//                    // Map REST request to API request
-//                    TicketDetailsAPIRequest apiRequest = ticketsMapper.fromRestToAPIDetailsRequest(restRequest);
-//
-//                    // Set additional context information
-//                    apiRequest.setTicketID(ticketID);
-//                    apiRequest.setAuthorization(authorization);
-//                    apiRequest.setCorrelationID(xCorrelationID);
-//                    apiRequest.setIdempotencyKey(idempotencyKey);
-//                    apiRequest.setUserAgent(userAgent);
-//
-//                    return apiRequest;
-//                })
-//                .flatMap(apiRequest -> ticketsApiService.updateTicketDetails(apiRequest))
-//                .map(apiResponse -> {
-//                    // Map API response back to REST response
-//                    TicketResponse restResponse = ticketsMapper.fromAPIToRestTicketResponse(apiResponse);
-//                    return new ResponseEntity<>(restResponse, HttpStatus.OK);
-//                })
-//                .onErrorMap(throwable -> {
-//                    // Handle and wrap exceptions appropriately
-//                    System.err.println("Error in updateTicketDetails: " + throwable.getMessage());
-//                    return throwable;
-//                });
-//    }
+    public Mono<TicketResponse> updateTicketDetails(
+            TicketDetailsRequest restRequest,
+            String ticketID,
+            String xCorrelationID,
+            String idempotencyKey,
+            String userAgent) {
+
+        //TODO: out of scope and time.
+        // Simulating this part
+        return Mono.delay(Duration.ofMillis(100))
+                .then(Mono.fromCallable(() -> {
+
+                    TicketResponse response = new TicketResponse();
+                    response.setTicketId(ticketID);
+                    response.setStatus(TicketResponse.StatusEnum.IN_PROGRESS);
+
+                    if (restRequest != null) {
+                        response.setDescription(restRequest.getDescription());
+                    }
+
+                    return response;
+                }));
+    }
 
     public Mono<TicketStatusResponse> updateTicketStatus(
             TicketStatusRequest restRequest,
-            String authorization,
             String ticketID,
             String xCorrelationID,
             String idempotencyKey,
@@ -117,7 +105,6 @@ public class TicketsDelegate {
 
         // Set additional context information
         apiRequest.setTicketID(UUID.fromString(ticketID));
-        apiRequest.setAuthorization(authorization);
         apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
         apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
         apiRequest.setUserAgent(userAgent);

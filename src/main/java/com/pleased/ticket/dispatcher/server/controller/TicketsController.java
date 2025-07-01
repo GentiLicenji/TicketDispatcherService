@@ -24,6 +24,7 @@ import javax.validation.ValidationException;
 
 @Validated
 @RestController
+@RequestMapping("/api/v1")
 @Api(value = "tickets", description = "Group of APIs providing ticket operations.", tags = {"Tickets"})
 public class TicketsController {
 
@@ -63,7 +64,7 @@ public class TicketsController {
             @ApiParam(value = "")
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
-        return ticketsDelegate.createTicket(body, authorization, xCorrelationID, idempotencyKey, userAgent)
+        return ticketsDelegate.createTicket(body,authorization, xCorrelationID, idempotencyKey, userAgent)
                 .map(response -> ResponseEntity.ok(response))
                 .onErrorMap(this::mapToHttpException);
     }
@@ -82,8 +83,6 @@ public class TicketsController {
             produces = {"application/json"},
             consumes = {"application/json"})
     public Mono<ResponseEntity<TicketAssignmentResponse>> assignTicket(
-            @ApiParam(value = "Bearer access token", required = true)
-            @RequestHeader(value = "Authorization", required = true) String authorization,
 
             @ApiParam(value = "", required = true)
             @PathVariable("ticketID") String ticketID,
@@ -100,7 +99,7 @@ public class TicketsController {
             @ApiParam(value = "")
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
-        return ticketsDelegate.assignTicket(body, authorization, ticketID, xCorrelationID, idempotencyKey, userAgent)
+        return ticketsDelegate.assignTicket(body, ticketID, xCorrelationID, idempotencyKey, userAgent)
                 .map(response -> ResponseEntity.ok(response))
                 .onErrorMap(this::mapToHttpException);
     }
@@ -119,8 +118,6 @@ public class TicketsController {
             produces = {"application/json"},
             consumes = {"application/json"})
     public Mono<ResponseEntity<TicketStatusResponse>> updateTicketStatus(
-            @ApiParam(value = "Bearer access token", required = true)
-            @RequestHeader(value = "Authorization", required = true) String authorization,
 
             @ApiParam(value = "", required = true)
             @PathVariable("ticketID") String ticketID,
@@ -137,47 +134,45 @@ public class TicketsController {
             @ApiParam(value = "")
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
-        return ticketsDelegate.updateTicketStatus(body, authorization, ticketID, xCorrelationID, idempotencyKey, userAgent)
+        return ticketsDelegate.updateTicketStatus(body,  ticketID, xCorrelationID, idempotencyKey, userAgent)
                 .map(response -> ResponseEntity.ok(response))
                 .onErrorMap(this::mapToHttpException);
     }
 
-//    @ApiOperation(value = "Update ticket details", nickname = "updateTicketDetails", notes = "", response = TicketResponse.class, authorizations = {
-//            @Authorization(value = "jwt"),
-//            @Authorization(value = "oauth2", scopes = {
-//                    @AuthorizationScope(scope = "read", description = "Read access"),
-//                    @AuthorizationScope(scope = "write", description = "Write access")
-//            })
-//    }, tags = {"Tickets"})
-//    @ApiResponses(value = {
-//            @ApiResponse(code = 200, message = "Ticket updated", response = TicketResponse.class)
-//    })
-//    @PatchMapping(value = "/tickets/{ticketID}/details",
-//            produces = {"application/json"},
-//            consumes = {"application/json"})
-//    public Mono<ResponseEntity<TicketResponse>> updateTicketDetails(
-//            @ApiParam(value = "Bearer access token", required = true)
-//            @RequestHeader(value = "Authorization", required = true) String authorization,
-//
-//            @ApiParam(value = "", required = true)
-//            @PathVariable("ticketID") String ticketID,
-//
-//            @ApiParam(value = "", required = true)
-//            @Valid @RequestBody Mono<TicketDetailsRequest> body,
-//
-//            @ApiParam(value = "")
-//            @RequestHeader(value = "X-Correlation-ID", required = false) String xCorrelationID,
-//
-//            @ApiParam(value = "")
-//            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-//
-//            @ApiParam(value = "")
-//            @RequestHeader(value = "User-Agent", required = false) String userAgent) {
-//
-//        return body.flatMap(requestBody ->
-//                ticketsDelegate.updateTicketDetails(requestBody, authorization, ticketID, xCorrelationID, idempotencyKey, userAgent)
-//        );
-//    }
+    @ApiOperation(value = "Update ticket details", nickname = "updateTicketDetails", notes = "", response = TicketResponse.class, authorizations = {
+            @Authorization(value = "jwt"),
+            @Authorization(value = "oauth2", scopes = {
+                    @AuthorizationScope(scope = "read", description = "Read access"),
+                    @AuthorizationScope(scope = "write", description = "Write access")
+            })
+    }, tags = {"Tickets"})
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Ticket updated", response = TicketResponse.class)
+    })
+    @PatchMapping(value = "/tickets/{ticketID}/details",
+            produces = {"application/json"},
+            consumes = {"application/json"})
+    public Mono<ResponseEntity<TicketResponse>> updateTicketDetails(
+
+            @ApiParam(value = "", required = true)
+            @PathVariable("ticketID") String ticketID,
+
+            @ApiParam(value = "", required = true)
+            @Valid @RequestBody TicketDetailsRequest body,
+
+            @ApiParam(value = "")
+            @RequestHeader(value = "X-Correlation-ID", required = false) String xCorrelationID,
+
+            @ApiParam(value = "")
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+
+            @ApiParam(value = "")
+            @RequestHeader(value = "User-Agent", required = false) String userAgent) {
+
+        return ticketsDelegate.updateTicketDetails(body, ticketID, xCorrelationID, idempotencyKey, userAgent)
+                .map(response -> ResponseEntity.ok(response))
+                .onErrorMap(this::mapToHttpException);
+    }
 
 
     private Throwable mapToHttpException(Throwable throwable) {

@@ -50,9 +50,10 @@ public class TicketsApiService {
 
         //Create event with timestamp
         TicketCreated event = TicketCreated.builder()
-                .ticketId(response.getTicketID())
+                .ticketId(ticketId)
                 .subject(request.getSubject())
                 .description(request.getDescription())
+                .projectId(request.getProjectId())
                 .userId(request.getUserId())
                 .correlationId(request.getCorrelationID())
                 .eventId(request.getIdempotencyKey())
