@@ -43,7 +43,7 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
 
         // Consumer group and offset management
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "ticket-dispatcher-service");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "ticket-dispatcher-service"); //Fallback value of GroupID
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false); // Manual commit for transactional processing
 

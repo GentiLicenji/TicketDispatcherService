@@ -1,8 +1,8 @@
 package com.pleased.ticket.dispatcher.server.config;
 
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ser.std.StringSerializer;
+
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,8 +44,7 @@ public class KafkaProducerConfig {
         props.put(ProducerConfig.RECEIVE_BUFFER_CONFIG, 65536); // 64KB receive buffer
 
         // Performance tuning
-        // For pure throughput, switching to async fire-and-forget:
-        props.put(ProducerConfig.ACKS_CONFIG, "0"); // No acknowledgment (fastest)
+        props.put(ProducerConfig.ACKS_CONFIG, "1"); // Only leader acknowledgment - Switch to ALL for production
         props.put(ProducerConfig.RETRIES_CONFIG, 3);
         props.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, 100);
         props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 30000);
