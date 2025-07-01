@@ -11,7 +11,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("user")
+@Table("user_pls")
 public class UserEntity {
 
     @Id
