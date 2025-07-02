@@ -11,7 +11,9 @@ import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
 import com.pleased.ticket.dispatcher.server.repository.ProjectRepository;
 import com.pleased.ticket.dispatcher.server.repository.TicketRepository;
 import com.pleased.ticket.dispatcher.server.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,6 +26,30 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integration tests for {@link TicketEventConsumer}.
+ * <p>
+ * Verifies the end-to-end behavior of ticket-related Kafka events, ensuring
+ * that the database reflects the correct state after consuming:
+ * <ul>
+ *     <li>{@link com.pleased.ticket.dispatcher.server.model.events.TicketCreated}</li>
+ *     <li>{@link com.pleased.ticket.dispatcher.server.model.events.TicketAssigned}</li>
+ *     <li>{@link com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated}</li>
+ * </ul>
+ * <p>
+ * Uses an in-memory H2 database with reactive repositories. Each test prepares
+ * its own data and verifies persistence or failure scenarios using {@link StepVerifier}.
+ * <p>
+ * Scenarios covered:
+ * <ul>
+ *     <li>Ticket creation persists new ticket</li>
+ *     <li>Ticket assignment updates assignee and timestamp</li>
+ *     <li>Status update modifies the ticket state correctly</li>
+ *     <li>Handles not-found cases by throwing {@link EntityNotFoundException}</li>
+ * </ul>
+ * <p>
+ * Profile: {@code test}, DB is reset between each test run.
+ */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -44,44 +70,90 @@ public class TicketEventConsumerIT {
     private static UUID ticketId;
     private static UUID userId;
     private static UUID projectId;
+    private static UUID assigneeId;
 
     @BeforeAll
     static void setUp() {
         ticketId = UUID.randomUUID();
         userId = UUID.randomUUID();
         projectId = UUID.randomUUID();
+        assigneeId = UUID.randomUUID();
     }
 
-    @Test
-    void handleTicketCreated_ShouldCreateTicketInDatabase() {
-        // Arrange - Create the required user first
-        UserEntity user = new UserEntity();
-        user.setUserId(userId);
-        user.setEmail("test@example.com");
-        user.setName("Test User");
+    /**
+     * Create the required user,assignee and project before each test run.
+     */
+    @BeforeEach
+    void setUpEach() {
+        //Clear db entries so we don't attempt double insertion.
+        ticketRepository.deleteAll().block();
+        userRepository.deleteAll().block();
+        projectRepository.deleteAll().block();
+
+        //Creating db entries for test setup
+        UserEntity pmUser = new UserEntity();
+        pmUser.setUserId(userId);
+        pmUser.setEmail("test@example.com");
+        pmUser.setName("Test PM");
+
+        UserEntity devUser = new UserEntity();
+        devUser.setUserId(assigneeId);
+        devUser.setEmail("test@example.com");
+        devUser.setName("Test Dev");
 
         ProjectEntity project = new ProjectEntity();
         project.setProjectId(projectId);
         project.setTitle("Test Project");
 
         // Save dependencies first
-        userRepository.save(user).block();
+        userRepository.save(pmUser).block();
+        userRepository.save(devUser).block();
         projectRepository.save(project).block();
 
-        // Arrange
-        UUID correlationId = UUID.randomUUID();
-        UUID eventId = UUID.randomUUID();
-        OffsetDateTime now = OffsetDateTime.now();
+        //Create existing ticket for updates,assignment
+        TicketEntity existingTicket = new TicketEntity();
+        existingTicket.setTicketId(ticketId);
+        existingTicket.setSubject("Test Ticket");
+        existingTicket.setDescription("Test Description");
+        existingTicket.setUserId(userId);
+        existingTicket.setProjectId(projectId);
+        existingTicket.setStatus(TicketStatusEnum.OPEN.toString());
+        existingTicket.setCreatedAt(OffsetDateTime.now());
 
+        // Save the initial ticket
+        ticketRepository.save(existingTicket).block();
+    }
+
+    /**
+     * Resets data for each test call.
+     * <p>
+     * Note: even though H2 is an in memory db, and it shouldn't persist data.
+     * Spring test stores the same context between all test calls.
+     */
+    @AfterEach
+    void tearDownEach() {
+        //Clear db entries so we don't attempt double insertion.
+        ticketRepository.deleteAll().block();
+        userRepository.deleteAll().block();
+        projectRepository.deleteAll().block();
+    }
+
+    @Test
+    void handleTicketCreated_ShouldCreateTicketInDatabase() {
+
+        // New ticket ID since it's a brand-new Ticket
+        UUID newTicket = UUID.randomUUID();
+
+        // Create a ticket event
         TicketCreated event = TicketCreated.builder()
-                .ticketId(ticketId)
+                .ticketId(newTicket)
                 .subject("Test Ticket")
                 .description("This is a test ticket")
                 .userId(userId)
                 .projectId(projectId)
-                .correlationId(correlationId)
-                .eventId(eventId)
-                .createdAt(now)
+                .correlationId(UUID.randomUUID())
+                .eventId(UUID.randomUUID())
+                .createdAt(OffsetDateTime.now())
                 .build();
 
         // Act
@@ -89,9 +161,9 @@ public class TicketEventConsumerIT {
                 .verifyComplete();
 
         // Assert - Query real database
-        StepVerifier.create(ticketRepository.findById(ticketId))
+        StepVerifier.create(ticketRepository.findById(newTicket))
                 .assertNext(savedTicket -> {
-                    assertThat(savedTicket.getTicketId()).isEqualTo(ticketId);
+                    assertThat(savedTicket.getTicketId()).isEqualTo(newTicket);
                     assertThat(savedTicket.getSubject()).isEqualTo("Test Ticket");
                     assertThat(savedTicket.getDescription()).isEqualTo("This is a test ticket");
                     assertThat(savedTicket.getUserId()).isEqualTo(userId);
@@ -106,23 +178,9 @@ public class TicketEventConsumerIT {
 
     @Test
     void handleTicketAssigned_ShouldUpdateTicketInDatabase() {
-        // Arrange - First create a ticket in the database
-        UUID userId = UUID.randomUUID();
-        UUID projectId = UUID.randomUUID();
-        UUID assigneeId = UUID.randomUUID();
+
+        //Create assign-ticket event
         OffsetDateTime now = OffsetDateTime.now();
-
-        TicketEntity existingTicket = new TicketEntity();
-        existingTicket.setTicketId(ticketId);
-        existingTicket.setSubject("Test Ticket");
-        existingTicket.setDescription("Test Description");
-        existingTicket.setUserId(userId);
-        existingTicket.setProjectId(projectId);
-        existingTicket.setStatus(TicketStatusEnum.OPEN.toString());
-        existingTicket.setCreatedAt(now.minusHours(1));
-
-        // Save the initial ticket
-        ticketRepository.save(existingTicket).block();
 
         TicketAssigned event = TicketAssigned.builder()
                 .ticketId(ticketId)
@@ -152,23 +210,9 @@ public class TicketEventConsumerIT {
 
     @Test
     void handleTicketStatusUpdated_ShouldUpdateTicketStatusInDatabase() {
-        // Arrange - First create a ticket in the database
-        UUID userId = UUID.randomUUID();
-        UUID projectId = UUID.randomUUID();
+        // Create update-status-ticket event
         String newStatus = "CLOSED";
         OffsetDateTime now = OffsetDateTime.now();
-
-        TicketEntity existingTicket = new TicketEntity();
-        existingTicket.setTicketId(ticketId);
-        existingTicket.setSubject("Test Ticket");
-        existingTicket.setDescription("Test Description");
-        existingTicket.setUserId(userId);
-        existingTicket.setProjectId(projectId);
-        existingTicket.setStatus(TicketStatusEnum.OPEN.toString());
-        existingTicket.setCreatedAt(now.minusHours(1));
-
-        // Save the initial ticket
-        ticketRepository.save(existingTicket).block();
 
         TicketStatusUpdated event = TicketStatusUpdated.builder()
                 .ticketId(ticketId)
