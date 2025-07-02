@@ -119,20 +119,26 @@ Follow producer configurations here: [KafkaProducerConfig](/src/main/java/com/pl
 
 ### 3. 🧪 Load Testing Strategy
 
-#### Option A: Use Your App’s Own Producer
+### Option 1: JMeter GUI
 
-* Use JMeter, Postman runner, or a custom script to call `/produce` 1000s of times.
-<br>Link to JMeter file for true concurrency: [pleased-ticketing-load-test.jmx](docs/pleased-ticketing-load-test.jmx)
-<br>Link to Postman test-suite: [Postman-Test-Suite-TicketDispatcher-v1.0.json](docs/Postman-Test-Suite-TicketDispatcher-v1.0.json)
+1. Open Apache JMeter
+2. Load the test plan:
 
-#### Option B: Simulate Consumer Load
+   ```
+   /docs/pleased-ticketing-load-test.jmx
+   ```
+3. Configure number of threads, duration, etc.
+4. Run the test and view results in the GUI
 
-* Use `concurrency=12` in your `ConcurrentKafkaListenerContainerFactory`
-* Send high volume of messages and measure:
+### Option 2: JMeter CLI
 
-    * Lag (via Kafdrop or CLI)
-    * Throughput (records/sec)
-    * Errors/retries (logs)
+To run the test in headless mode:
+
+```bash
+jmeter -n -t docs/pleased-ticketing-load-test.jmx -l results.jtl
+```
+
+Results will be saved to `results.jtl`.
 
 ---
 
