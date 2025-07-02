@@ -10,7 +10,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -49,6 +48,9 @@ public class TicketEventProducerIT {
     // Queues to collect messages
     private BlockingQueue<ConsumerRecord<String, String>> createRecords;
 
+    // Container as instance variable so we can stop and clear it
+    private KafkaMessageListenerContainer<String, String> container;
+
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -58,31 +60,42 @@ public class TicketEventProducerIT {
         createRecords = new LinkedBlockingQueue<>();
 
         // Set up consumer for topic
-        setupConsumerForTopic(KafkaTopicConfig.TICKET_CREATE_TOPIC, createRecords, "createTestGroup");
+        setupConsumerForTopic(createRecords);
     }
 
-    private void setupConsumerForTopic(String topic, BlockingQueue<ConsumerRecord<String, String>> records, String groupId) {
-        Map<String, Object> consumerProps = KafkaTestUtils.consumerProps(groupId, "true", embeddedKafkaBroker);
+    @AfterEach
+    void tearDown() {
+        if (container != null) {
+            container.stop();
+        }
+        createRecords.clear();
+    }
+
+    private void setupConsumerForTopic(BlockingQueue<ConsumerRecord<String, String>> records) {
+        Map<String, Object> consumerProps = KafkaTestUtils.consumerProps("createTestGroup", "true", embeddedKafkaBroker);
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
 
         ConsumerFactory<String, String> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
-        ContainerProperties containerProperties = new ContainerProperties(topic);
+        ContainerProperties containerProperties = new ContainerProperties(KafkaTopicConfig.TICKET_CREATE_TOPIC);
 
-        KafkaMessageListenerContainer<String, String> container = new KafkaMessageListenerContainer<>(cf, containerProperties);
+        container = new KafkaMessageListenerContainer<>(cf, containerProperties);
         container.setupMessageListener((MessageListener<String, String>) records::offer);
         container.start();
 
+        // Wait for assignment with timeout
         ContainerTestUtils.waitForAssignment(container, embeddedKafkaBroker.getPartitionsPerTopic());
+
+        // Add a small delay to ensure consumer is ready
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
-    @AfterEach
-    void tearDown() {
-        createRecords.clear();
-    }
-
-    @Disabled("Needs more time to fix. No published events are being captured.")
+    //    @Disabled("Needs more time to fix. No published events are being captured.")
     @Test
     void publishTicketCreated_ShouldPublishEventToKafka() throws Exception {
         // Arrange
