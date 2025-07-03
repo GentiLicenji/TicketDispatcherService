@@ -27,7 +27,6 @@ import java.util.function.Supplier;
  * <p>
  * To be replaced with an in memory data store solution like Redis.
  */
-@Component
 public class IdempotencyFilter implements WebFilter {
 
     private final Map<String, CachedResponse> cache = new ConcurrentHashMap<>();

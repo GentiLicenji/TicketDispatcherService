@@ -20,7 +20,6 @@ import java.time.OffsetDateTime;
 
 @Slf4j
 @Service
-@KafkaListener(topics = {"ticket-create.v1", "ticket-assignments.v1", "ticket-updates.v1"})
 public class TicketEventConsumer {
 
     private final TicketRepository ticketRepository;
