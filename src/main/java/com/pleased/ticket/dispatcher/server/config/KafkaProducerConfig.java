@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
@@ -19,6 +20,7 @@ import java.util.Map;
 /**
  * High Throughput Kafka configuration
  */
+@Profile("!embedded-kafka") // active when NOT in test
 @Configuration
 @EnableConfigurationProperties(KafkaProperties.class)
 public class KafkaProducerConfig {

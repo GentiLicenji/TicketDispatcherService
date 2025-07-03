@@ -1,13 +1,12 @@
 package com.pleased.ticket.dispatcher.server.service;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.pleased.ticket.dispatcher.server.config.KafkaTopicConfig;
 import com.pleased.ticket.dispatcher.server.config.TestKafkaConfig;
 import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,17 +14,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 import org.springframework.kafka.listener.MessageListener;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.utils.ContainerTestUtils;
-import org.springframework.kafka.test.utils.KafkaTestUtils;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -33,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ActiveProfiles("embedded-kafka")
 @SpringBootTest
 @Import(TestKafkaConfig.class)
 public class TicketEventProducerIT {
@@ -42,6 +40,9 @@ public class TicketEventProducerIT {
 
     @Autowired
     private EmbeddedKafkaBroker embeddedKafkaBroker;
+
+    @Autowired
+    private ConsumerFactory<String, Object> consumerFactory;
 
     private ObjectMapper objectMapper;
 
@@ -55,6 +56,7 @@ public class TicketEventProducerIT {
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         // Initialize queues
         createRecords = new LinkedBlockingQueue<>();
@@ -72,15 +74,9 @@ public class TicketEventProducerIT {
     }
 
     private void setupConsumerForTopic(BlockingQueue<ConsumerRecord<String, String>> records) {
-        Map<String, Object> consumerProps = KafkaTestUtils.consumerProps("createTestGroup", "true", embeddedKafkaBroker);
-        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-
-        ConsumerFactory<String, String> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
         ContainerProperties containerProperties = new ContainerProperties(KafkaTopicConfig.TICKET_CREATE_TOPIC);
 
-        container = new KafkaMessageListenerContainer<>(cf, containerProperties);
+        container = new KafkaMessageListenerContainer<>(consumerFactory, containerProperties);
         container.setupMessageListener((MessageListener<String, String>) records::offer);
         container.start();
 
@@ -95,7 +91,6 @@ public class TicketEventProducerIT {
         }
     }
 
-    //    @Disabled("Needs more time to fix. No published events are being captured.")
     @Test
     void publishTicketCreated_ShouldPublishEventToKafka() throws Exception {
         // Arrange
@@ -127,7 +122,7 @@ public class TicketEventProducerIT {
         assertThat(received.topic()).isEqualTo(KafkaTopicConfig.TICKET_CREATE_TOPIC);
         assertThat(received.key()).isEqualTo(ticketId.toString());
 
-        TicketCreated receivedEvent = objectMapper.readValue(received.value(), TicketCreated.class);
+        TicketCreated receivedEvent = objectMapper.convertValue(received.value(), TicketCreated.class);
         assertThat(receivedEvent.getTicketId()).isEqualTo(ticketId);
         assertThat(receivedEvent.getSubject()).isEqualTo("Test Ticket");
         assertThat(receivedEvent.getDescription()).isEqualTo("This is a test ticket");
@@ -137,5 +132,4 @@ public class TicketEventProducerIT {
         assertThat(receivedEvent.getEventId()).isEqualTo(eventId);
         assertThat(receivedEvent.getCreatedAt()).isEqualTo(now);
     }
-
 }
