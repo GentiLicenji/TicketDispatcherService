@@ -19,6 +19,7 @@ import reactor.core.publisher.Mono;
 
 import javax.validation.Valid;
 import javax.validation.ValidationException;
+import java.util.UUID;
 
 @javax.annotation.Generated(value = "com.glic.GentiSpringCodegen", date = "2025-06-29T19:50:29.045+02:00")
 
@@ -56,10 +57,10 @@ public class TicketsController {
             @Valid @RequestBody TicketCreateRequest body,
 
             @ApiParam(value = "")
-            @RequestHeader(value = "X-Correlation-ID", required = false) String xCorrelationID,
+            @RequestHeader(value = "X-Correlation-ID", required = false) UUID xCorrelationID,
 
             @ApiParam(value = "")
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader(value = "Idempotency-Key", required = true) UUID idempotencyKey,
 
             @ApiParam(value = "")
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
@@ -164,7 +165,7 @@ public class TicketsController {
             @RequestHeader(value = "X-Correlation-ID", required = false) String xCorrelationID,
 
             @ApiParam(value = "")
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader(value = "Idempotency-Key", required = true) String idempotencyKey,
 
             @ApiParam(value = "")
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {

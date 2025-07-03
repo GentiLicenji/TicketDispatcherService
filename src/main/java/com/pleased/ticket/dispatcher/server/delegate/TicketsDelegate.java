@@ -28,8 +28,8 @@ public class TicketsDelegate {
     public Mono<TicketResponse> createTicket(
             TicketCreateRequest restRequest,
             String authorization,
-            String xCorrelationID,
-            String idempotencyKey,
+            UUID xCorrelationID,
+            UUID idempotencyKey,
             String userAgent) {
 
 
@@ -41,8 +41,8 @@ public class TicketsDelegate {
 //        apiRequest.setUserId(extractUserID(authorization));
 
         // Set additional context information
-        apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
-        apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
+        apiRequest.setCorrelationID(xCorrelationID);
+        apiRequest.setIdempotencyKey(idempotencyKey);
         apiRequest.setUserAgent(userAgent);
 
         return ticketsApiService.createTicket(apiRequest)
