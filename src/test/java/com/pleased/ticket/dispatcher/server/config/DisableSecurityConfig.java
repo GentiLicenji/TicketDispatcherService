@@ -13,7 +13,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
  */
 @EnableWebFluxSecurity
 @TestConfiguration
-@Profile("test") // active when NOT in test
+@Profile("test") // active when testing
 public class DisableSecurityConfig {
 
     @Bean
