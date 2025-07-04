@@ -10,10 +10,10 @@ import com.pleased.ticket.dispatcher.server.repository.TicketRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 import java.time.OffsetDateTime;
@@ -34,12 +34,12 @@ public class TicketEventConsumer {
             groupId = "ticket-service-create-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional(transactionManager = "kafkaTransactionManager")
     public Mono<Void> handleTicketCreated(
             @Payload TicketCreated event,
             @Header("kafka_receivedTopic") String topic,
-            @Header("kafka_receivedPartition") int partition,
-            @Header("kafka_offset") long offset) {
+            @Header("kafka_receivedPartitionId") int partition,
+            @Header("kafka_offset") long offset,
+            Acknowledgment ack) {
 
         log.info("Processing TicketCreated event: ticketId={}, topic={}, partition={}, offset={}",
                 event.getTicketId(), topic, partition, offset);
@@ -57,8 +57,15 @@ public class TicketEventConsumer {
                     return entity;
                 })
                 .flatMap(ticketRepository::save)
-                .doOnSuccess(saved -> log.info("Successfully created ticket in DB: {}", saved.getTicketId()))
+                .doOnSuccess(saved -> {
+                    log.info("Successfully created ticket in DB: {}", saved.getTicketId());
+                    ack.acknowledge();
+                })
                 .doOnError(error -> log.error("Failed to create ticket: {}", event.getTicketId(), error))
+//                .onErrorResume(error -> {
+//                    // Send to DLQ or handle poison messages after max retries
+//                    return handlePoisonMessage(event, error);
+//                })
                 .then();
     }
 
@@ -67,7 +74,6 @@ public class TicketEventConsumer {
             groupId = "ticket-service-assignment-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional(transactionManager = "kafkaTransactionManager")
     public Mono<Void> handleTicketAssigned(
             @Payload TicketAssigned event,
             @Header("kafka_receivedTopic") String topic,
@@ -98,7 +104,6 @@ public class TicketEventConsumer {
             groupId = "ticket-service-update-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional(transactionManager = "kafkaTransactionManager")
     public Mono<Void> handleTicketStatusUpdated(
             @Payload TicketStatusUpdated event,
             @Header("kafka_receivedTopic") String topic,

@@ -1,5 +1,6 @@
 package com.pleased.ticket.dispatcher.server.model.events;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -18,4 +19,12 @@ public class TicketAssigned extends TicketEvent {
     private UUID ticketId;
     private UUID assigneeId;
     private OffsetDateTime assignedAt;
+
+//    @JsonProperty("eventType")
+//    private String eventType = "TicketAssigned";
+
+    @JsonProperty("eventType")
+    public String getEventType() {
+        return "TicketAssigned";
+    }
 }

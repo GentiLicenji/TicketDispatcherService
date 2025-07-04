@@ -1,6 +1,8 @@
 package com.pleased.ticket.dispatcher.server.config;
 
 
+import com.pleased.ticket.dispatcher.server.model.events.TicketEvent;
+import com.pleased.ticket.dispatcher.server.util.mapper.TicketEventSerializer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -29,7 +31,7 @@ import java.util.Map;
 @Profile("!embedded-kafka") // active when NOT in test
 @Configuration
 @EnableKafka
-@EnableTransactionManagement
+//@EnableTransactionManagement
 public class KafkaConsumerConfig {
 
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
@@ -47,10 +49,10 @@ public class KafkaConsumerConfig {
         // Consumer group and offset management
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "ticket-dispatcher-service"); //Fallback value of GroupID
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false); // Manual commit for transactional processing
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false); // Manual commit for DB persistence
 
         // Transactional settings
-        props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
+//        props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
 
         // Performance tuning
         props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 100); // Reduced wait time
@@ -62,55 +64,62 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, 1048576); // 1MB per partition
 
         // JSON deserializer settings
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, Object.class);
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.pleased.ticket.dispatcher.server.model.events");
+        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, TicketEvent.class);
+
+//        // Add type mappings
+        props.put(JsonDeserializer.TYPE_MAPPINGS,
+                "TicketCreated:com.pleased.ticket.dispatcher.server.model.events.TicketCreated," +
+                        "TicketAssigned:com.pleased.ticket.dispatcher.server.model.events.TicketAssigned," +
+                        "TicketStatusUpdated:com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated");
         props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
 
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
+    public ConcurrentKafkaListenerContainerFactory<String, TicketEvent> kafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, TicketEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(consumerFactory());
 
-        // Transactional support
-        factory.getContainerProperties().setTransactionManager(kafkaTransactionManager());
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
+        // ACK mode for DB persistence - commit after successful DB write
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
 
-        // Error handling
-        factory.setCommonErrorHandler(new DefaultErrorHandler(
-                new FixedBackOff(1000L, 3L) // Retry 3 times with 1s delay
-        ));
+        // Configure error handler
+        factory.setCommonErrorHandler(new DefaultErrorHandler((record, exception) -> {
+            // Custom error handling logic
+            System.err.println("Error processing record: " + record + ", Exception: " + exception);
+            new FixedBackOff(1000L, 3L); // Retry 3 times with 1s delay
+        }));
 
         // Concurrency settings
-        factory.setConcurrency(10); // 10 consumer threads per topic partition
+        factory.setConcurrency(5); // 10 consumer threads per topic partition
 
         return factory;
     }
 
-    @Bean
-    public KafkaTransactionManager kafkaTransactionManager() {
-        KafkaTransactionManager manager = new KafkaTransactionManager(producerFactoryTran());
-        return manager;
-    }
-
-    @Bean
-    public ProducerFactory<String, Object> producerFactoryTran() {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-
-        // Transactional producer settings
-        props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "ticket-service-tx-");
-        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-        props.put(ProducerConfig.ACKS_CONFIG, "all");
-        props.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
-        props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1);
-
-        return new DefaultKafkaProducerFactory<>(props);
-    }
+//    @Bean
+//    public KafkaTransactionManager kafkaTransactionManager() {
+//        KafkaTransactionManager manager = new KafkaTransactionManager(producerFactoryTran());
+//        return manager;
+//    }
+//
+//    @Bean
+//    public ProducerFactory<String, Object> producerFactoryTran() {
+//        Map<String, Object> props = new HashMap<>();
+//        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+//        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+//        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, TicketEventSerializer.class);
+//
+//        // Transactional producer settings
+//        props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "ticket-service-tx-");
+//        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+//        props.put(ProducerConfig.ACKS_CONFIG, "all");
+//        props.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
+//        props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1);
+//
+//        return new DefaultKafkaProducerFactory<>(props);
+//    }
 }

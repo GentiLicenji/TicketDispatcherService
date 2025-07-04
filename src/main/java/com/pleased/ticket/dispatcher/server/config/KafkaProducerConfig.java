@@ -1,8 +1,10 @@
 package com.pleased.ticket.dispatcher.server.config;
 
 
+import com.pleased.ticket.dispatcher.server.util.mapper.TicketEventSerializer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -12,7 +14,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
-import org.springframework.kafka.support.serializer.JsonSerializer;
+
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +24,7 @@ import java.util.Map;
  */
 @Profile("!embedded-kafka") // active when NOT in test
 @Configuration
-@EnableConfigurationProperties(KafkaProperties.class)
+//@EnableConfigurationProperties(KafkaProperties.class)
 public class KafkaProducerConfig {
 
     @Value("${kafka.bootstrap-servers:localhost:9092}")
@@ -56,8 +58,15 @@ public class KafkaProducerConfig {
         props.put(ProducerConfig.CONNECTIONS_MAX_IDLE_MS_CONFIG, 540000);
         props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
 
+//        // Add type information to JSON
+        props.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false); // Don't use headers
+        props.put(JsonSerializer.TYPE_MAPPINGS,
+                "TicketCreated:com.pleased.ticket.dispatcher.server.model.events.TicketCreated," +
+                        "TicketAssigned:com.pleased.ticket.dispatcher.server.model.events.TicketAssigned," +
+                        "TicketStatusUpdated:com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated");
+
         // Idempotence for exactly-once semantics (optional, reduces throughput slightly)
-        // props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+//         props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
 
         return new DefaultKafkaProducerFactory<>(props);
     }
