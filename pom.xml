@@ -112,6 +112,47 @@
             <artifactId>springfox-boot-starter</artifactId>
             <version>${swagger.version}</version>
         </dependency>
+        <!-- Protobuf dependencies -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.25.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>3.25.1</version>
+        </dependency>
+
+        <!-- Confluent Schema Registry with Protobuf support -->
+        <!-- Protobuf serializer -->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-protobuf-serializer</artifactId>
+            <version>6.2.0</version> <!-- Java 8 compatible -->
+        </dependency>
+
+        <!-- Schema Registry Client -->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-registry-client</artifactId>
+            <version>6.2.0</version>
+        </dependency>
+
+        <!-- Circuit breaker (JDK 8 compatible) -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot2</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+
+        <!-- Metrics (Prometheus) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <version>1.11.5</version> <!-- Last version supporting Java 8 -->
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -186,7 +227,52 @@
                             -Amapstruct.defaultComponentModel=spring
                         </compilerArg>
                     </compilerArgs>
+                    <!-- Compiler plugin picks up generated proto sources -->
+                    <generatedSourcesDirectory>
+                        ${project.build.directory}/generated-sources/protobuf/java
+                    </generatedSourcesDirectory>
                 </configuration>
+            </plugin>
+            <!-- OS detection (only needed for the classifier) -->
+            <plugin>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>detect</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Protobuf plugin -->
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.6.1</version>  <!-- latest 0.6.x supports Java 8 -->
+                <configuration>
+                    <!-- Tells maven it which protoc to download -->
+                    <protocArtifact>
+                        com.google.protobuf:protoc:3.24.0:exe:${os.detected.classifier}
+                    </protocArtifact>
+                    <!-- where your .proto files live -->
+                    <protoSourceRoot>${project.basedir}/src/main/proto</protoSourceRoot>
+                    <!-- target for the generated Java classes -->
+                    <outputDirectory>${project.build.directory}/generated-sources/protobuf/java</outputDirectory>
+                    <!-- if you have imports (e.g. common.proto) in other dirs you can list them here -->
+                    <includeDirectories>
+                        <include>${project.basedir}/src/main/proto</include>
+                    </includeDirectories>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <!-- if you have test protos, can add <goal>test-compile</goal> -->
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -254,4 +340,10 @@
             </build>
         </profile>
     </profiles>
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
 </project>

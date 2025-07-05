@@ -1,9 +1,10 @@
 package com.pleased.ticket.dispatcher.server.service;
 
 import com.pleased.ticket.dispatcher.server.model.api.*;
-import com.pleased.ticket.dispatcher.server.model.events.TicketAssigned;
+//import com.pleased.ticket.dispatcher.server.model.events.TicketAssigned;
+//import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
+//import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
 import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
-import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -49,12 +50,12 @@ public class TicketsApiService {
         response.setCreatedAt(OffsetDateTime.now());
 
         //Create event with timestamp
-        TicketCreated event = TicketCreated.builder()
-                .ticketId(ticketId)
-                .subject(request.getSubject())
-                .description(request.getDescription())
-                .projectId(request.getProjectId())
-                .userId(request.getUserId())
+        TicketCreated event = TicketCreated.newBuilder()
+                .setTicketId(ticketId)
+                .setSubject(request.getSubject())
+                .setDescription(request.getDescription())
+                .setProjectId(request.getProjectId())
+                .setUserId(request.getUserId())
                 .correlationId(request.getCorrelationID())
                 .eventId(request.getIdempotencyKey())
                 .createdAt(response.getCreatedAt())

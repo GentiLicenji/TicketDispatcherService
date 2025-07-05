@@ -1,0 +1,66 @@
+// src/main/proto/ticket/ticket_events.proto
+syntax = "proto3";
+
+package ticket;
+
+import "ticket/common.proto";
+
+option java_package = "com.pleased.ticket.dispatcher.server.model.events";
+option java_outer_classname = "TicketEventsProto";
+option java_multiple_files = true;
+
+// Base event metadata (will be in Kafka headers)
+message EventMetadata {
+  UUID event_id = 1;
+  UUID correlation_id = 2;
+  int32 event_version = 3;
+  Timestamp published_at = 4;
+}
+
+// TICKET CREATED EVENT
+message TicketCreated {
+  UUID ticket_id = 1;
+  string subject = 2;
+  string description = 3;
+  UUID user_id = 4;
+  UUID project_id = 5;
+  Timestamp created_at = 6;
+
+  // Optional fields for schema evolution
+  string priority = 7;      // NEW: can be added without breaking compatibility
+  repeated string tags = 8;  // NEW: can be added without breaking compatibility
+}
+
+// TICKET ASSIGNED EVENT
+message TicketAssigned {
+  UUID ticket_id = 1;
+  UUID assignee_id = 2;
+  Timestamp assigned_at = 3;
+
+  // Optional fields
+  UUID assigned_by = 4;     // Who assigned the ticket
+  string assignment_reason = 5;
+}
+
+// TICKET STATUS UPDATED EVENT
+message TicketStatusUpdated {
+  UUID ticket_id = 1;
+  string status = 2;        // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  Timestamp updated_at = 3;
+
+  // Optional fields
+  string previous_status = 4;
+  UUID updated_by = 5;
+  string status_reason = 6;
+}
+
+// WRAPPER FOR ALL EVENTS (Alternative approach)
+message TicketEvent {
+  EventMetadata metadata = 1;
+
+  oneof event {
+    TicketCreated ticket_created = 2;
+    TicketAssigned ticket_assigned = 3;
+    TicketStatusUpdated ticket_status_updated = 4;
+  }
+}
