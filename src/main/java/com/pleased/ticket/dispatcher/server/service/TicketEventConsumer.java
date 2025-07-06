@@ -7,16 +7,17 @@ import com.pleased.ticket.dispatcher.server.model.events.TicketAssigned;
 import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
 import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
 import com.pleased.ticket.dispatcher.server.repository.TicketRepository;
+import com.pleased.ticket.dispatcher.server.util.mapper.UUIDConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 @Slf4j
 @Service
@@ -34,7 +35,6 @@ public class TicketEventConsumer {
             groupId = "ticket-service-create-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional(transactionManager = "kafkaTransactionManager")
     public Mono<Void> handleTicketCreated(
             @Payload TicketCreated event,
             @Header("kafka_receivedTopic") String topic,
@@ -46,13 +46,13 @@ public class TicketEventConsumer {
 
         return Mono.fromCallable(() -> {
                     TicketEntity entity = new TicketEntity();
-                    entity.setTicketId(event.getTicketId());
+                    entity.setTicketId(UUIDConverter.bytesToUUID(event.getTicketId()));
                     entity.setSubject(event.getSubject());
                     entity.setDescription(event.getDescription());
                     entity.setStatus(TicketStatusEnum.OPEN.toString()); // Default status for new tickets
                     entity.setCreatedAt(OffsetDateTime.now());
-                    entity.setUserId(event.getUserId());
-                    entity.setProjectId(event.getProjectId());
+                    entity.setUserId(UUIDConverter.bytesToUUID(event.getUserId()));
+                    entity.setProjectId(UUIDConverter.bytesToUUID(event.getProjectId()));
 
                     return entity;
                 })
@@ -67,7 +67,6 @@ public class TicketEventConsumer {
             groupId = "ticket-service-assignment-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional(transactionManager = "kafkaTransactionManager")
     public Mono<Void> handleTicketAssigned(
             @Payload TicketAssigned event,
             @Header("kafka_receivedTopic") String topic,
@@ -77,11 +76,11 @@ public class TicketEventConsumer {
         log.info("Processing TicketAssigned event: ticketId={}, assigneeId={}, topic={}, partition={}, offset={}",
                 event.getTicketId(), event.getAssigneeId(), topic, partition, offset);
 
-        return ticketRepository.findById(event.getTicketId())
+        return ticketRepository.findById(UUIDConverter.bytesToUUID(event.getTicketId()))
                 .switchIfEmpty(Mono.error(new EntityNotFoundException("Ticket not found: " + event.getTicketId())))
                 .flatMap(ticket -> {
-                    ticket.setAssigneeId(event.getAssigneeId());
-                    ticket.setUpdatedAt(event.getAssignedAt());
+                    ticket.setAssigneeId(UUIDConverter.bytesToUUID(event.getAssigneeId()));
+                    ticket.setUpdatedAt(event.getAssignedAt().atOffset(ZoneOffset.UTC));
 
                     // Mark as not new since we're updating
                     ticket.setNew(false);
@@ -98,7 +97,6 @@ public class TicketEventConsumer {
             groupId = "ticket-service-update-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional(transactionManager = "kafkaTransactionManager")
     public Mono<Void> handleTicketStatusUpdated(
             @Payload TicketStatusUpdated event,
             @Header("kafka_receivedTopic") String topic,
@@ -108,11 +106,11 @@ public class TicketEventConsumer {
         log.info("Processing TicketStatusUpdated event: ticketId={}, status={}, topic={}, partition={}, offset={}",
                 event.getTicketId(), event.getStatus(), topic, partition, offset);
 
-        return ticketRepository.findById(event.getTicketId())
+        return ticketRepository.findById(UUIDConverter.bytesToUUID(event.getTicketId()))
                 .switchIfEmpty(Mono.error(new EntityNotFoundException("Ticket not found: " + event.getTicketId())))
                 .flatMap(ticket -> {
                     ticket.setStatus(event.getStatus().toUpperCase());
-                    ticket.setUpdatedAt(event.getUpdatedAt());
+                    ticket.setUpdatedAt(event.getUpdatedAt().atOffset(ZoneOffset.UTC));
 
                     // Mark as not new since we're updating
                     ticket.setNew(false);

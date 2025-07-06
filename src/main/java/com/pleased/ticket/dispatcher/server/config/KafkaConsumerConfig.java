@@ -1,9 +1,10 @@
 package com.pleased.ticket.dispatcher.server.config;
 
 
+import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -17,10 +18,8 @@ import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.kafka.transaction.KafkaTransactionManager;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
@@ -29,11 +28,13 @@ import java.util.Map;
 @Profile("!embedded-kafka") // active when NOT in test
 @Configuration
 @EnableKafka
-@EnableTransactionManagement
 public class KafkaConsumerConfig {
 
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
     private String bootstrapServers;
+
+    @Value("${spring.kafka.schema-registry.url:http://localhost:8081}")
+    private String schemaRegistryUrl;
 
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
@@ -41,16 +42,15 @@ public class KafkaConsumerConfig {
 
         // Basic configuration
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
+        props.put(KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+        props.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true);
 
         // Consumer group and offset management
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "ticket-dispatcher-service"); //Fallback value of GroupID
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false); // Manual commit for transactional processing
-
-        // Transactional settings
-        props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
 
         // Performance tuning
         props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 100); // Reduced wait time
@@ -60,11 +60,6 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 50000); // 50KB instead of 1KB
         props.put(ConsumerConfig.FETCH_MAX_BYTES_CONFIG, 52428800); // 50MB max fetch
         props.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, 1048576); // 1MB per partition
-
-        // JSON deserializer settings
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, Object.class);
-        props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
 
         return new DefaultKafkaConsumerFactory<>(props);
     }

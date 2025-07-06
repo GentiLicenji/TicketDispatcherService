@@ -4,6 +4,7 @@ import com.pleased.ticket.dispatcher.server.model.api.*;
 import com.pleased.ticket.dispatcher.server.model.events.TicketAssigned;
 import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
 import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
+import com.pleased.ticket.dispatcher.server.util.mapper.EventMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,10 +25,12 @@ import java.util.UUID;
 public class TicketsApiService {
 
     private final TicketEventProducer eventPublisher;
+    private final EventMapper eventMapper;
 
     @Autowired
-    public TicketsApiService(TicketEventProducer eventPublisher) {
+    public TicketsApiService(TicketEventProducer eventPublisher, EventMapper eventMapper) {
         this.eventPublisher = eventPublisher;
+        this.eventMapper = eventMapper;
     }
 
     /**
@@ -49,16 +52,18 @@ public class TicketsApiService {
         response.setCreatedAt(OffsetDateTime.now());
 
         //Create event with timestamp
-        TicketCreated event = TicketCreated.builder()
-                .ticketId(ticketId)
-                .subject(request.getSubject())
-                .description(request.getDescription())
-                .projectId(request.getProjectId())
-                .userId(request.getUserId())
-                .correlationId(request.getCorrelationID())
-                .eventId(request.getIdempotencyKey())
-                .createdAt(response.getCreatedAt())
-                .build();
+//        TicketCreated event = TicketCreated.builder()
+//                .ticketId(ticketId)
+//                .subject(request.getSubject())
+//                .description(request.getDescription())
+//                .projectId(request.getProjectId())
+//                .userId(request.getUserId())
+//                .correlationId(request.getCorrelationID())
+//                .eventId(request.getIdempotencyKey())
+//                .createdAt(response.getCreatedAt())
+//                .build();
+        TicketCreated event= new TicketCreated();
+        eventMapper.updateTicketCreated(request, response.getTicketID(),response.getCreatedAt().toInstant(),event);
 
         return eventPublisher.publishTicketCreated(event)
                 .doOnError(error -> log.error("Failed to create ticket with title: {}", request.getSubject(), error))
@@ -78,20 +83,23 @@ public class TicketsApiService {
         response.setAssigneeId(request.getAssigneeId());
         response.setAssignedAt(OffsetDateTime.now());
 
-        // Publish event
-        TicketAssigned event = TicketAssigned.builder()
-                .ticketId(request.getTicketID())
-                .assigneeId(request.getAssigneeId())
-                .assignedAt(response.getAssignedAt())
-                .correlationId(request.getCorrelationID())
-                .eventId(request.getIdempotencyKey())
-//                            .eventVersion(TicketEventProducer.eventVersion)TODO: supposed to handle multi schema
-                .build();
+//        // Publish event
+//        TicketAssigned event = TicketAssigned.builder()
+//                .ticketId(request.getTicketID())
+//                .assigneeId(request.getAssigneeId())
+//                .assignedAt(response.getAssignedAt())
+//                .correlationId(request.getCorrelationID())
+//                .eventId(request.getIdempotencyKey())
+////                            .eventVersion(TicketEventProducer.eventVersion)TODO: supposed to handle multi schema
+//                .build();
+
+        TicketAssigned event = eventMapper.toTicketAssigned(request, response.getAssignedAt().toInstant());
+
+
         return eventPublisher.publishTicketAssigned(event)
                 .doOnError(error -> log.error("Failed to assign ticket {}", request.getTicketID(), error))
                 .then(Mono.just(response));
     }
-
 
     /**
      * Update ticket status
@@ -106,13 +114,15 @@ public class TicketsApiService {
         response.setStatus(request.getStatus());
         response.setUpdatedAt(OffsetDateTime.now());
 
-        TicketStatusUpdated event = TicketStatusUpdated.builder()
-                .status(request.getStatus())
-                .ticketId(request.getTicketID())
-                .correlationId(request.getCorrelationID())
-                .eventId(request.getIdempotencyKey())
-                .updatedAt(response.getUpdatedAt())
-                .build();
+//        TicketStatusUpdated event = TicketStatusUpdated.builder()
+//                .status(request.getStatus())
+//                .ticketId(request.getTicketID())
+//                .correlationId(request.getCorrelationID())
+//                .eventId(request.getIdempotencyKey())
+//                .updatedAt(response.getUpdatedAt())
+//                .build();
+
+        TicketStatusUpdated event = eventMapper.toTicketStatusUpdated(request,response.getUpdatedAt().toInstant());
 
         return eventPublisher.publishTicketStatusUpdated(event)
                 .doOnError(error -> log.error("Failed to update ticket {} status", request.getTicketID(), error))
