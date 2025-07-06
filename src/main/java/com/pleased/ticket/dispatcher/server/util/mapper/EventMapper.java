@@ -13,10 +13,6 @@ import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.UUID;
 
-@MapperConfig(
-        unmappedTargetPolicy = ReportingPolicy.IGNORE,
-        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE //Ignoring mapping of null fields to avoid NPE
-)
 @Mapper(componentModel = "spring")
 public interface EventMapper {
 
@@ -42,7 +38,7 @@ public interface EventMapper {
     @Mapping(target = "userId", source = "request.userId", qualifiedByName = "uuidToBytes")
     @Mapping(target = "projectId", source = "request.projectId", qualifiedByName = "uuidToBytes")
     @Mapping(target = "createdAt", source = "createdAt")
-    void updateTicketCreated(TicketCreateAPIRequest request, UUID ticketId, Instant createdAt, @MappingTarget TicketCreated target);
+    TicketCreated toTicketCreated(TicketCreateAPIRequest request, UUID ticketId, Instant createdAt);
 
     // TicketStatusUpdated mapping
     @Mapping(target = "eventId", source = "request.idempotencyKey", qualifiedByName = "uuidToBytes")
@@ -83,12 +79,14 @@ public interface EventMapper {
     // UUID to ByteBuffer conversion
     @Named("uuidToBytes")
     default ByteBuffer uuidToBytes(UUID uuid) {
+        if (uuid == null) return null;
         return UUIDConverter.uuidToBytes(uuid);
     }
 
     // ByteBuffer to UUID conversion (for reverse mapping if needed)
     @Named("bytesToUuid")
     default UUID bytesToUuid(ByteBuffer buffer) {
+        if (buffer == null) return null;
         return UUIDConverter.bytesToUUID(buffer);
     }
 }

@@ -175,7 +175,6 @@ public class TicketsController {
                 .onErrorMap(this::mapToHttpException);
     }
 
-
     private Throwable mapToHttpException(Throwable throwable) {
         // Map business exceptions to appropriate HTTP status codes
         if (throwable instanceof ValidationException) {

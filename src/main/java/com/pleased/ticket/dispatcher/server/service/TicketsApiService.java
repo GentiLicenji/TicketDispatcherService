@@ -62,8 +62,8 @@ public class TicketsApiService {
 //                .eventId(request.getIdempotencyKey())
 //                .createdAt(response.getCreatedAt())
 //                .build();
-        TicketCreated event= new TicketCreated();
-        eventMapper.updateTicketCreated(request, response.getTicketID(),response.getCreatedAt().toInstant(),event);
+//       = new TicketCreated();
+        TicketCreated event= eventMapper.toTicketCreated(request, response.getTicketID(),response.getCreatedAt().toInstant());
 
         return eventPublisher.publishTicketCreated(event)
                 .doOnError(error -> log.error("Failed to create ticket with title: {}", request.getSubject(), error))
