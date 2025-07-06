@@ -13,13 +13,14 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 import java.util.Date;
+import java.util.UUID;
 
 public class TestUtil {
 
     public static String generateValidJwt() throws JOSEException {
         // Create the JWT claims
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                .subject("test-user")
+                .subject(UUID.randomUUID().toString())
                 .claim("scope", "read write")
                 .issueTime(new Date())
                 .expirationTime(new Date(System.currentTimeMillis() + 3600 * 1000 * 5)) // 5 hours

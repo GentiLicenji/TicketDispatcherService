@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.pleased.ticket.dispatcher.server.filter.CorrelationIdFilter;
 import com.pleased.ticket.dispatcher.server.filter.IdempotencyFilter;
+import com.pleased.ticket.dispatcher.server.filter.JwtAuthenticationFilter;
 import com.pleased.ticket.dispatcher.server.filter.LoggingFilter;
 import io.r2dbc.spi.ConnectionFactory;
 import org.springframework.context.annotation.Bean;
@@ -43,9 +44,15 @@ public class ApplicationConfig {
     }
 
     @Bean
-    @Order(2)
+    @Order(3)
     public CorrelationIdFilter correlationIdFilter() {
         return new CorrelationIdFilter();
+    }
+
+    @Bean
+    @Order(-100)  // High priority to run early in the filter chain
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
     }
 
     @Bean

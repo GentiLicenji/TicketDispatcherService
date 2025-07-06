@@ -146,6 +146,67 @@ public class GlobalExceptionHandler {
         return Mono.just(new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR));
     }
 
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleUnauthorized(
+            UnauthorizedException ex,
+            ServerWebExchange exchange) {
+
+        String requestId = generateRequestId();
+        ErrorResponse errorResponse = new ErrorResponse()
+                .timestamp(System.currentTimeMillis())
+                .path(exchange.getRequest().getPath().value())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error(HttpStatus.UNAUTHORIZED.getReasonPhrase())
+                .message(ex.getMessage())
+                .requestId(requestId);
+
+        log.warn("Unauthorized access attempt. RequestId: {}, Path: {}, Message: {}",
+                requestId, exchange.getRequest().getPath().value(), ex.getMessage());
+
+        return Mono.just(new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED));
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleSecurityException(
+            SecurityException ex,
+            ServerWebExchange exchange) {
+
+        String requestId = generateRequestId();
+        ErrorResponse errorResponse = new ErrorResponse()
+                .timestamp(System.currentTimeMillis())
+                .path(exchange.getRequest().getPath().value())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                .message(ex.getMessage())
+                .requestId(requestId);
+
+        log.warn("Security exception. RequestId: {}, Path: {}, Message: {}",
+                requestId, exchange.getRequest().getPath().value(), ex.getMessage());
+
+        return Mono.just(new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN));
+    }
+
+    @ExceptionHandler(JWTVerificationException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleJWTVerificationException(
+            JWTVerificationException ex,
+            ServerWebExchange exchange) {
+
+        String requestId = generateRequestId();
+        ErrorResponse errorResponse = new ErrorResponse()
+                .timestamp(System.currentTimeMillis())
+                .path(exchange.getRequest().getPath().value())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error(HttpStatus.UNAUTHORIZED.getReasonPhrase())
+                .message("Authentication failed")
+                .requestId(requestId);
+
+        log.warn("JWT verification failed. RequestId: {}, Path: {}, Exception: ",
+                requestId, exchange.getRequest().getPath().value(), ex);
+
+        return Mono.just(new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED));
+    }
+
     /**
      * Convenience method to generate a unique request ID
      */

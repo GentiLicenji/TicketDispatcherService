@@ -50,9 +50,6 @@ public class TicketsController {
             produces = {"application/json"},
             consumes = {"application/json"})
     public Mono<ResponseEntity<TicketResponse>> createTicket(
-            @ApiParam(value = "Bearer access token", required = true)
-            @RequestHeader(value = "Authorization", required = true) String authorization,
-
             @ApiParam(value = "", required = true)
             @Valid @RequestBody TicketCreateRequest body,
 
@@ -65,9 +62,8 @@ public class TicketsController {
             @ApiParam(value = "")
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
-        return ticketsDelegate.createTicket(body,authorization, xCorrelationID, idempotencyKey, userAgent)
-                .map(response -> ResponseEntity.ok(response))
-                .onErrorMap(this::mapToHttpException);
+        return ticketsDelegate.createTicket(body, xCorrelationID, idempotencyKey, userAgent)
+                .map(response -> ResponseEntity.ok(response));
     }
 
     @ApiOperation(value = "Assign a ticket to a user", nickname = "assignTicket", notes = "", response = TicketAssignmentResponse.class, authorizations = {
@@ -101,8 +97,7 @@ public class TicketsController {
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
         return ticketsDelegate.assignTicket(body, ticketID, xCorrelationID, idempotencyKey, userAgent)
-                .map(response -> ResponseEntity.ok(response))
-                .onErrorMap(this::mapToHttpException);
+                .map(response -> ResponseEntity.ok(response));
     }
 
     @ApiOperation(value = "Update the status of a ticket", nickname = "updateTicketStatus", notes = "", response = TicketStatusResponse.class, authorizations = {
@@ -136,8 +131,7 @@ public class TicketsController {
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
         return ticketsDelegate.updateTicketStatus(body,  ticketID, xCorrelationID, idempotencyKey, userAgent)
-                .map(response -> ResponseEntity.ok(response))
-                .onErrorMap(this::mapToHttpException);
+                .map(response -> ResponseEntity.ok(response));
     }
 
     @ApiOperation(value = "Update ticket details", nickname = "updateTicketDetails", notes = "", response = TicketResponse.class, authorizations = {
@@ -171,18 +165,6 @@ public class TicketsController {
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
         return ticketsDelegate.updateTicketDetails(body, ticketID, xCorrelationID, idempotencyKey, userAgent)
-                .map(response -> ResponseEntity.ok(response))
-                .onErrorMap(this::mapToHttpException);
-    }
-
-    private Throwable mapToHttpException(Throwable throwable) {
-        // Map business exceptions to appropriate HTTP status codes
-        if (throwable instanceof ValidationException) {
-            return new ResponseStatusException(HttpStatus.BAD_REQUEST, throwable.getMessage());
-        }
-        if (throwable instanceof TicketNotFoundException) {
-            return new ResponseStatusException(HttpStatus.NOT_FOUND, throwable.getMessage());
-        }
-        return new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error");
+                .map(response -> ResponseEntity.ok(response));
     }
 }

@@ -5,6 +5,7 @@ import com.pleased.ticket.dispatcher.server.model.api.TicketCreateAPIRequest;
 import com.pleased.ticket.dispatcher.server.model.api.TicketStatusAPIRequest;
 import com.pleased.ticket.dispatcher.server.model.rest.*;
 import com.pleased.ticket.dispatcher.server.service.TicketsApiService;
+import com.pleased.ticket.dispatcher.server.util.ReactiveSecurityContextHolder;
 import com.pleased.ticket.dispatcher.server.util.mapper.TicketsMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -27,25 +28,25 @@ public class TicketsDelegate {
 
     public Mono<TicketResponse> createTicket(
             TicketCreateRequest restRequest,
-            String authorization,
             UUID xCorrelationID,
             UUID idempotencyKey,
             String userAgent) {
 
+        return ReactiveSecurityContextHolder.getUserId()
+                .flatMap(userId -> {
+                    // Map REST request to API request
+                    TicketCreateAPIRequest apiRequest = ticketsMapper.fromRestToAPICreateRequest(restRequest);
 
-        // Map REST request to API request
-        TicketCreateAPIRequest apiRequest = ticketsMapper.fromRestToAPICreateRequest(restRequest);
+                    // Set user ID from reactive security context
+                    apiRequest.setUserId(UUID.fromString(userId));
 
-        //TODO: Derive userID from jwt sub field by decoding auth header.
-//        Ideally should be derived from the authPrinciple in a security filter.
-//        apiRequest.setUserId(extractUserID(authorization));
+                    // Set additional context information
+                    apiRequest.setCorrelationID(xCorrelationID);
+                    apiRequest.setIdempotencyKey(idempotencyKey);
+                    apiRequest.setUserAgent(userAgent);
 
-        // Set additional context information
-        apiRequest.setCorrelationID(xCorrelationID);
-        apiRequest.setIdempotencyKey(idempotencyKey);
-        apiRequest.setUserAgent(userAgent);
-
-        return ticketsApiService.createTicket(apiRequest)
+                    return ticketsApiService.createTicket(apiRequest);
+                })
                 .map(ticketsMapper::fromAPIToRestTicketResponse);
     }
 
