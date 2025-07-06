@@ -3,11 +3,12 @@ package com.pleased.ticket.dispatcher.server;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 
 
-@SpringBootApplication
+@SpringBootApplication(exclude = KafkaAutoConfiguration.class)
 @ComponentScan(basePackages = {
         "com.pleased.ticket.dispatcher.server.controller",
         "com.pleased.ticket.dispatcher.server.delegate",
