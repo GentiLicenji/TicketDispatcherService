@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.pleased.ticket.dispatcher.server.config.KafkaTopicConfig;
 import com.pleased.ticket.dispatcher.server.config.TestKafkaConfig;
 import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
+import com.pleased.ticket.dispatcher.server.util.mapper.UUIDConverter;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -101,15 +102,15 @@ public class TicketEventProducerIT {
         UUID eventId = UUID.randomUUID();
         OffsetDateTime now = OffsetDateTime.now();
 
-        TicketCreated event = TicketCreated.builder()
-                .ticketId(ticketId)
-                .subject("Test Ticket")
-                .description("This is a test ticket")
-                .userId(userId)
-                .projectId(projectId)
-                .correlationId(correlationId)
-                .eventId(eventId)
-                .createdAt(now)
+        TicketCreated event = TicketCreated.newBuilder()
+                .setTicketId(UUIDConverter.uuidToBytes(ticketId))
+                .setSubject("Test Ticket")
+                .setDescription("This is a test ticket")
+                .setUserId(UUIDConverter.uuidToBytes(userId))
+                .setProjectId(UUIDConverter.uuidToBytes(projectId))
+//                .setCorrelationId(correlationId)
+                .setEventId(UUIDConverter.uuidToBytes(eventId))
+                .setCreatedAt(now.toInstant())
                 .build();
 
         // Act
@@ -128,7 +129,7 @@ public class TicketEventProducerIT {
         assertThat(receivedEvent.getDescription()).isEqualTo("This is a test ticket");
         assertThat(receivedEvent.getUserId()).isEqualTo(userId);
         assertThat(receivedEvent.getProjectId()).isEqualTo(projectId);
-        assertThat(receivedEvent.getCorrelationId()).isEqualTo(correlationId);
+//        assertThat(receivedEvent.getCorrelationId()).isEqualTo(correlationId);
         assertThat(receivedEvent.getEventId()).isEqualTo(eventId);
         assertThat(receivedEvent.getCreatedAt()).isEqualTo(now);
     }

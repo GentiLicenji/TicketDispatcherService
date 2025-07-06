@@ -11,6 +11,7 @@ import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
 import com.pleased.ticket.dispatcher.server.repository.ProjectRepository;
 import com.pleased.ticket.dispatcher.server.repository.TicketRepository;
 import com.pleased.ticket.dispatcher.server.repository.UserRepository;
+import com.pleased.ticket.dispatcher.server.util.mapper.UUIDConverter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -145,15 +146,15 @@ public class TicketEventConsumerIT {
         UUID newTicket = UUID.randomUUID();
 
         // Create a ticket event
-        TicketCreated event = TicketCreated.builder()
-                .ticketId(newTicket)
-                .subject("Test Ticket")
-                .description("This is a test ticket")
-                .userId(userId)
-                .projectId(projectId)
-                .correlationId(UUID.randomUUID())
-                .eventId(UUID.randomUUID())
-                .createdAt(OffsetDateTime.now())
+        TicketCreated event = TicketCreated.newBuilder()
+                .setTicketId(UUIDConverter.uuidToBytes(ticketId))
+                .setSubject("Test Ticket")
+                .setDescription("This is a test ticket")
+                .setUserId(UUIDConverter.uuidToBytes(userId))
+                .setProjectId(UUIDConverter.uuidToBytes(projectId))
+//                .setCorrelationId(correlationId)
+                .setEventId(UUIDConverter.uuidToBytes(UUID.randomUUID()))
+                .setCreatedAt(OffsetDateTime.now().toInstant())
                 .build();
 
         // Act
@@ -182,12 +183,12 @@ public class TicketEventConsumerIT {
         //Create assign-ticket event
         OffsetDateTime now = OffsetDateTime.now();
 
-        TicketAssigned event = TicketAssigned.builder()
-                .ticketId(ticketId)
-                .assigneeId(assigneeId)
-                .correlationId(UUID.randomUUID())
-                .eventId(UUID.randomUUID())
-                .assignedAt(now)
+        TicketAssigned event = TicketAssigned.newBuilder()
+                .setTicketId(UUIDConverter.uuidToBytes(ticketId))
+                .setAssigneeId(UUIDConverter.uuidToBytes(assigneeId))
+//                .correlationId(UUID.randomUUID())
+                .setEventId(UUIDConverter.uuidToBytes(UUID.randomUUID()))
+                .setAssignedAt(now.toInstant())
                 .build();
 
         // Act
@@ -214,12 +215,12 @@ public class TicketEventConsumerIT {
         String newStatus = "CLOSED";
         OffsetDateTime now = OffsetDateTime.now();
 
-        TicketStatusUpdated event = TicketStatusUpdated.builder()
-                .ticketId(ticketId)
-                .status(newStatus)
-                .correlationId(UUID.randomUUID())
-                .eventId(UUID.randomUUID())
-                .updatedAt(now)
+        TicketStatusUpdated event = TicketStatusUpdated.newBuilder()
+                .setTicketId(UUIDConverter.uuidToBytes(ticketId))
+                .setStatus(newStatus)
+//                .correlationId(UUID.randomUUID())
+                .setEventId(UUIDConverter.uuidToBytes(UUID.randomUUID()))
+                .setUpdatedAt(now.toInstant())
                 .build();
 
         // Act
@@ -245,12 +246,12 @@ public class TicketEventConsumerIT {
         UUID ticketId = UUID.randomUUID();
         UUID assigneeId = UUID.randomUUID();
 
-        TicketAssigned event = TicketAssigned.builder()
-                .ticketId(ticketId)
-                .assigneeId(assigneeId)
-                .correlationId(UUID.randomUUID())
-                .eventId(UUID.randomUUID())
-                .assignedAt(OffsetDateTime.now())
+        TicketAssigned event = TicketAssigned.newBuilder()
+                .setTicketId(UUIDConverter.uuidToBytes(ticketId))
+                .setAssigneeId(UUIDConverter.uuidToBytes(assigneeId))
+//                .correlationId(UUID.randomUUID())
+                .setEventId(UUIDConverter.uuidToBytes(UUID.randomUUID()))
+                .setAssignedAt(OffsetDateTime.now().toInstant())
                 .build();
 
         // Act & Assert - Use StepVerifier to test reactive error handling
@@ -271,12 +272,12 @@ public class TicketEventConsumerIT {
         UUID ticketId = UUID.randomUUID();
         String newStatus = "CLOSED";
 
-        TicketStatusUpdated event = TicketStatusUpdated.builder()
-                .ticketId(ticketId)
-                .status(newStatus)
-                .correlationId(UUID.randomUUID())
-                .eventId(UUID.randomUUID())
-                .updatedAt(OffsetDateTime.now())
+        TicketStatusUpdated event = TicketStatusUpdated.newBuilder()
+                .setTicketId(UUIDConverter.uuidToBytes(ticketId))
+                .setStatus(newStatus)
+//                .correlationId(UUID.randomUUID())
+                .setEventId(UUIDConverter.uuidToBytes(UUID.randomUUID()))
+                .setUpdatedAt(OffsetDateTime.now().toInstant())
                 .build();
 
         // Act & Assert - Use StepVerifier to test reactive error handling
