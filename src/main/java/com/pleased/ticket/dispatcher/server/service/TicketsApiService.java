@@ -51,21 +51,9 @@ public class TicketsApiService {
         response.setStatus(TicketStatusEnum.OPEN.toString());
         response.setCreatedAt(OffsetDateTime.now());
 
-        //Create event with timestamp
-//        TicketCreated event = TicketCreated.builder()
-//                .ticketId(ticketId)
-//                .subject(request.getSubject())
-//                .description(request.getDescription())
-//                .projectId(request.getProjectId())
-//                .userId(request.getUserId())
-//                .correlationId(request.getCorrelationID())
-//                .eventId(request.getIdempotencyKey())
-//                .createdAt(response.getCreatedAt())
-//                .build();
-//       = new TicketCreated();
         TicketCreated event= eventMapper.toTicketCreated(request, response.getTicketID(),response.getCreatedAt().toInstant());
 
-        return eventPublisher.publishTicketCreated(event)
+        return eventPublisher.publishTicketCreated(event,request.getCorrelationID())
                 .doOnError(error -> log.error("Failed to create ticket with title: {}", request.getSubject(), error))
                 .then(Mono.just(response));
     }
@@ -83,20 +71,10 @@ public class TicketsApiService {
         response.setAssigneeId(request.getAssigneeId());
         response.setAssignedAt(OffsetDateTime.now());
 
-//        // Publish event
-//        TicketAssigned event = TicketAssigned.builder()
-//                .ticketId(request.getTicketID())
-//                .assigneeId(request.getAssigneeId())
-//                .assignedAt(response.getAssignedAt())
-//                .correlationId(request.getCorrelationID())
-//                .eventId(request.getIdempotencyKey())
-////                            .eventVersion(TicketEventProducer.eventVersion)TODO: supposed to handle multi schema
-//                .build();
-
         TicketAssigned event = eventMapper.toTicketAssigned(request, response.getAssignedAt().toInstant());
 
 
-        return eventPublisher.publishTicketAssigned(event)
+        return eventPublisher.publishTicketAssigned(event,request.getCorrelationID())
                 .doOnError(error -> log.error("Failed to assign ticket {}", request.getTicketID(), error))
                 .then(Mono.just(response));
     }
@@ -114,17 +92,9 @@ public class TicketsApiService {
         response.setStatus(request.getStatus());
         response.setUpdatedAt(OffsetDateTime.now());
 
-//        TicketStatusUpdated event = TicketStatusUpdated.builder()
-//                .status(request.getStatus())
-//                .ticketId(request.getTicketID())
-//                .correlationId(request.getCorrelationID())
-//                .eventId(request.getIdempotencyKey())
-//                .updatedAt(response.getUpdatedAt())
-//                .build();
-
         TicketStatusUpdated event = eventMapper.toTicketStatusUpdated(request,response.getUpdatedAt().toInstant());
 
-        return eventPublisher.publishTicketStatusUpdated(event)
+        return eventPublisher.publishTicketStatusUpdated(event,request.getCorrelationID())
                 .doOnError(error -> log.error("Failed to update ticket {} status", request.getTicketID(), error))
                 .then(Mono.just(response));
     }
