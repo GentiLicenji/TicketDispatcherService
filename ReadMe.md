@@ -35,84 +35,89 @@ Please focus on this document as it is important to me.
 
 ------
 
-# Kafka Message Format Guide
+## Kafka Message Format & Reactive Integration
 
-## Message Serialization
-- **Format**: JSON serialization using Spring Kafka's `JsonSerializer`/`JsonDeserializer`
-- **Key**: String (UUID converted to string)
-- **Value**: JSON-serialized event objects
+### Serialization
 
-#### 📂 Event Types
+* **Key Serializer**: `KafkaAvroSerializer`
+* **Value Serializer**: `KafkaAvroSerializer`
+* **Key Deserializer**: `KafkaAvroDeserializer`
+* **Value Deserializer**: `KafkaAvroDeserializer`
+* **Schema Registry**: `spring.kafka.schema‑registry.url` → Confluent Schema Registry
+* **UUID Logical Type**: binary (`bytes`), 16 bytes per UUID
 
-* `TicketCreated`
-* `TicketAssigned`
-* `TicketStatusUpdated`
+### Topic & Schema Registration
 
-## Event Structure
+Defined in `KafkaTopicConfig`:
 
-All events inherit from a base `TicketEvent` class with common fields:
+```java
+@Bean NewTopic ticketCreateTopic() { … .partitions(12).replicas(1).config(TopicConfig.COMPRESSION_TYPE_CONFIG, "lz4") … }
+@PostConstruct registerSchemas() { client.register("ticket-create.v1-value", TicketCreated.SCHEMA$); … }
+```
 
-```json
-{
-  "eventId": "uuid",
-  "correlationId": "uuid", 
-  "eventVersion": 1
+| Event               | Topic                   | Avro Class            |
+| ------------------- | ----------------------- | --------------------- |
+| TicketCreated       | `ticket-create.v1`      | `TicketCreated`       |
+| TicketAssigned      | `ticket-assignments.v1` | `TicketAssigned`      |
+| TicketStatusUpdated | `ticket-updates.v1`     | `TicketStatusUpdated` |
+
+### Producer: `KafkaProducerConfig` & `TicketEventProducer`
+
+* **Reactive Template**: `ReactiveKafkaProducerTemplate<ByteBuffer, Object>`
+* **Idempotence**: `ENABLE_IDEMPOTENCE=true`, `ACKS=all`
+* **Compression**: `snappy`
+* **Retry**: 3× with 100 ms backoff
+* **Headers**:
+
+   * `eventType`: set from `KafkaTopicConfig.EVENT_TYPE_MAP`
+   * correlation ID: encoded via `UUIDConverter.uuidToBytes(correlationId)` and passed as `SenderRecord.correlationMetadata()`
+* **Metrics**: `Micrometer` timers & counters around `.send(...)`
+
+```java
+private Mono<Void> publishEvent(...) {
+  SenderRecord<ByteBuffer,Object,ByteBuffer> record = SenderRecord.create(
+    topic, null, null, key, event, uuidToBytes(correlationId)
+  );
+  record.headers().add("eventType", topicToType.getBytes());
+  return reactiveKafkaTemplate.send(record)…
 }
 ```
 
-### TicketCreated Event
-**Topic**: `ticket-create.v1`
-```json
-{
-  "eventId": "550e8400-e29b-41d4-a716-446655440000",
-  "correlationId": "550e8400-e29b-41d4-a716-446655440001", 
-  "eventVersion": 1,
-  "ticketId": "550e8400-e29b-41d4-a716-446655440002",
-  "subject": "Bug in user authentication",
-  "description": "Users cannot log in with valid credentials",
-  "userId": "550e8400-e29b-41d4-a716-446655440003",
-  "projectId": "550e8400-e29b-41d4-a716-446655440004",
-  "createdAt": "2024-01-15T10:30:00Z"
-}
+### Consumer: `KafkaConsumerConfig` & `TicketEventConsumer`
+
+* **Reactive Template**: `ReactiveKafkaConsumerTemplate<ByteBuffer, T>`
+* **Deserializers**: Avro-specific reader enabled (`SPECIFIC_AVRO_READER_CONFIG=true`)
+* **Auto‑commit**: Disabled; uses `.receiveAutoAck()` + manual commit batches
+* **Concurrency**: Controlled in the reactive pipeline via `.flatMap(...)`
+* **Error Handling**: `DefaultErrorHandler` with a `FixedBackOff(1 s, 3)` → TODO: DLQ
+* **Group IDs**: one per topic (e.g. `ticket-service-create-consumer-reactive`)
+* **Processing**:
+
+   * `receiveAutoAck()` → `.flatMap(this::handleXxx)` → `.retry(3)`
+   * Each handler maps Avro record → domain entity → `ticketRepository.save(...)`
+
+```java
+reactiveTicketCreatedConsumer.receiveAutoAck()
+  .doOnNext(r -> log.info("Processing: {}", r.value()))
+  .flatMap(this::handleTicketCreated)
+  .retry(3)
+  .subscribe();
 ```
 
-## Topics Configuration
-- **Partitions**: 12 per topic (for high throughput)
-- **Compression**: LZ4
-- **Replication**: 1 (single broker setup)
-- **Segment time**: 10 minutes
+### Key Strategy & Ordering
 
-## Message Key Strategy
-- All messages use `ticketId` as the partition key
-- Idempotency keys are required by the client on the API level and are stored as `eventId`
-- Idempotency is enforced by the [IdempotencyFilter.java](src/main/java/com/pleased/ticket/dispatcher/server/filter/IdempotencyFilter.java).
-- Ensures related ticket events are processed in order within the same partition
+* **Partition Key**: binary `ticketId` ensures all events for a ticket land in the same partition
+* **In‑order Guarantees**: leveraging partition affinity + reactive back‑pressure
 
-## Consumer Configuration
-- **Group ID**: `ticket-dispatcher-service`
-- **Isolation Level**: `read_committed` (transactional support)
-- **Auto Commit**: Disabled (manual acknowledgment)
-- **Trusted Packages**: `*` (accepts all JSON types)
+### Observability & Future Enhancements
 
-## Error Handling
-- **Retry Policy**: 3 attempts with 1-second fixed backoff
-- **Transaction Support**: Enabled with `KafkaTransactionManager`
+* **Metrics**: producer send durations, error counters
+* **Structured Logging**: include `topic`, `partition`, `offset`, `eventType`, `correlationId`
+* **To‑do**:
 
-## Potential Improvements - *Incomplete-TODO*
-
-### Message Format Optimizations
-- **UUID Serialization**: Consider binary UUID serialization instead of string conversion to reduce message size by ~50% (16 bytes vs 36 bytes per UUID)
-- **Schema Registry**: Implement Avro/Protobuf with Confluent Schema Registry for better schema evolution, type safety, and smaller payload sizes
-- **Message Headers**: Move metadata (`eventId`, `correlationId`, `eventVersion`) to Kafka headers to separate business data from infrastructure concerns
-
-### Performance Enhancements
-- **Custom Partitioning**: Implement custom partitioner based on `projectId` + `ticketId` hash for better load distribution across related entities
-- **Batch Processing**: Setup consumers to do batch DB inserts and event processing for higher throughput
-- **Compression**: Evaluate zstd compression for better compression ratios than LZ4, especially for JSON payloads
-
-### Reliability & Monitoring
-- **Dead Letter Topics**: Add DLT configuration for failed message handling
-- **Message Timestamps**: Include `publishedAt` timestamp for better observability and message age tracking
+   * Dead‑letter topics
+   * Schema compatibility strategy
+   * Move common metadata (`eventId`, `eventVersion`) into Kafka headers
 
 ---
 
