@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.pleased.ticket.dispatcher.server.filter.CorrelationIdFilter;
 import com.pleased.ticket.dispatcher.server.filter.IdempotencyFilter;
+import com.pleased.ticket.dispatcher.server.filter.JwtAuthenticationFilter;
 import com.pleased.ticket.dispatcher.server.filter.LoggingFilter;
 import io.r2dbc.spi.ConnectionFactory;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +29,7 @@ public class ApplicationConfig {
     }
 
     /**
-     * Global REST Request / Response Reactive Filters.
+     * Global REST Reactive Filters.
      */
     @Bean
     @Order(1)
@@ -39,6 +41,18 @@ public class ApplicationConfig {
     @Order(2)
     public IdempotencyFilter idempotencyFilter() {
         return new IdempotencyFilter();
+    }
+
+    @Bean
+    @Order(3)
+    public CorrelationIdFilter correlationIdFilter() {
+        return new CorrelationIdFilter();
+    }
+
+    @Bean
+    @Order(-100)  // High priority to run early in the filter chain
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
     }
 
     @Bean

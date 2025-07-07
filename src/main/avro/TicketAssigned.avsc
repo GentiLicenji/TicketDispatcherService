@@ -1,0 +1,35 @@
+{
+  "type": "record",
+  "name": "TicketAssigned",
+  "namespace": "com.pleased.ticket.dispatcher.server.model.events",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": {
+        "type": "bytes",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "ticketId",
+      "type": {
+        "type": "bytes",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "assigneeId",
+      "type": {
+        "type": "bytes",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "assignedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import java.util.UUID;
  */
 @Getter
 @Setter
+//TODO:needs removing name and role.
 public class TicketAssignmentAPIResponse extends BaseAPIResponse {
     private UUID ticketID;
     private UUID assigneeId;

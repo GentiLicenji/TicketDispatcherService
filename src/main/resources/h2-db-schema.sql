@@ -1,4 +1,4 @@
-CREATE TABLE project (
+CREATE TABLE IF NOT EXISTS project (
                          project_id UUID PRIMARY KEY,
                          title VARCHAR(255) NOT NULL,
                          description TEXT,
@@ -9,7 +9,7 @@ CREATE TABLE project (
                          project_owner_id UUID
 );
 
-CREATE TABLE ticket (
+CREATE TABLE IF NOT EXISTS ticket (
                         ticket_id UUID PRIMARY KEY,
                         subject VARCHAR(255) NOT NULL,
                         description TEXT,
@@ -23,7 +23,7 @@ CREATE TABLE ticket (
                         project_id UUID     -- FK to project.project_id
 );
 
-CREATE TABLE user_pls (
+CREATE TABLE IF NOT EXISTS user_pls (
                       user_id UUID PRIMARY KEY,
                       name VARCHAR(255) NOT NULL,
                       email VARCHAR(255),
@@ -33,12 +33,12 @@ CREATE TABLE user_pls (
 );
 
 ALTER TABLE ticket
-    ADD CONSTRAINT fk_ticket_user FOREIGN KEY (user_id) REFERENCES user_pls(user_id);
+    ADD CONSTRAINT IF NOT EXISTS fk_ticket_user FOREIGN KEY (user_id) REFERENCES user_pls(user_id);
 
 ALTER TABLE ticket
-    ADD CONSTRAINT fk_ticket_assignee FOREIGN KEY (assignee_id) REFERENCES user_pls(user_id);
+    ADD CONSTRAINT IF NOT EXISTS fk_ticket_assignee FOREIGN KEY (assignee_id) REFERENCES user_pls(user_id);
 
 ALTER TABLE ticket
-    ADD CONSTRAINT fk_ticket_project FOREIGN KEY (project_id) REFERENCES project(project_id);
+    ADD CONSTRAINT IF NOT EXISTS fk_ticket_project FOREIGN KEY (project_id) REFERENCES project(project_id);
 
 

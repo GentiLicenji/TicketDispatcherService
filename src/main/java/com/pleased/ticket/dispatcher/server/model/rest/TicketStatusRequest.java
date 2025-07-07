@@ -1,6 +1,8 @@
 package com.pleased.ticket.dispatcher.server.model.rest;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import io.swagger.annotations.ApiModelProperty;
 import org.springframework.validation.annotation.Validated;
 
@@ -15,10 +17,45 @@ import java.util.Objects;
 
 
 public class TicketStatusRequest   {
-  @JsonProperty("status")
-  private String status = null;
 
-  public TicketStatusRequest status(String status) {
+  public enum StatusEnum {
+    OPEN("open"),
+    IN_PROGRESS("in_progress"),
+    RESOLVED("resolved"),
+    CLOSED("closed");
+
+    private String value;
+
+    StatusEnum(String value) {
+      this.value = value;
+    }
+
+    @JsonValue
+    public String getValue() {
+      return value;
+    }
+
+    @Override
+    @JsonCreator
+    public String toString() {
+      return String.valueOf(value);
+    }
+
+    @JsonCreator
+    public static StatusEnum fromValue(String text) {
+      for (StatusEnum b : StatusEnum.values()) {
+        if (b.value.equals(text)) {
+          return b;
+        }
+      }
+      return null;
+    }
+  }
+
+  @JsonProperty("status")
+  private StatusEnum status;
+
+  public TicketStatusRequest status(StatusEnum status) {
     this.status = status;
     return this;
   }
@@ -31,11 +68,11 @@ public class TicketStatusRequest   {
   @NotNull
 
 
-  public String getStatus() {
+  public StatusEnum getStatus() {
     return status;
   }
 
-  public void setStatus(String status) {
+  public void setStatus(StatusEnum status) {
     this.status = status;
   }
 

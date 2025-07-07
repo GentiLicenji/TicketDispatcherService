@@ -1,13 +1,8 @@
 package com.pleased.ticket.dispatcher.server.controller;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.proc.BadJWSException;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
+import com.pleased.ticket.dispatcher.server.TestUtil;
 import com.pleased.ticket.dispatcher.server.model.rest.TicketCreateRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
@@ -21,10 +16,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 import reactor.test.StepVerifier;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
-import java.util.Date;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,8 +37,10 @@ public class TicketsControllerAuthIT {
 
     @Test
     void testJwtValidation() throws JOSEException {
+        String userId="test-user";
+
         // Generate a token
-        String token = generateValidJwt();
+        String token = TestUtil.generateValidJwt(userId);
         log.info("Generated JWT: {}", token);
 
         // Test the decoder directly using StepVerifier
@@ -61,7 +54,7 @@ public class TicketsControllerAuthIT {
                     log.info("Issued at: {}", jwt.getIssuedAt());
 
                     assertNotNull(jwt);
-                    assertEquals("test-user", jwt.getSubject());
+                    assertEquals(userId, jwt.getSubject());
                     assertTrue(jwt.getClaims().containsKey("scope"));
                 })
                 .verifyComplete();
@@ -70,7 +63,7 @@ public class TicketsControllerAuthIT {
     @Disabled
     @Test
     void testJwtWithInvalidSignature() {
-        String token = generateInvalidJwt();
+        String token = TestUtil.generateInvalidJwt();
         log.info("Generated invalid JWT: {}", token);
 
         StepVerifier.create(jwtDecoder.decode(token))
@@ -80,7 +73,7 @@ public class TicketsControllerAuthIT {
 
     @Test
     void testEndpointWithValidToken_shouldReturnOK() throws JOSEException {
-        String token = generateValidJwt();
+        String token = TestUtil.generateValidJwt();
 
         TicketCreateRequest request = new TicketCreateRequest();
         request.setSubject("Test Ticket");
@@ -100,7 +93,7 @@ public class TicketsControllerAuthIT {
 
     @Test
     void testEndpointWithInvalidToken_shouldFailWithUnAuth() {
-        String token = generateInvalidJwt();
+        String token = TestUtil.generateInvalidJwt();
 
         TicketCreateRequest request = new TicketCreateRequest();
         request.setSubject("Test Ticket");
@@ -131,57 +124,5 @@ public class TicketsControllerAuthIT {
                 .expectStatus().isUnauthorized();
     }
 
-    private String generateValidJwt() throws JOSEException {
-        // Create the JWT claims
-        JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                .subject("test-user")
-                .claim("scope", "read write")
-                .issueTime(new Date())
-                .expirationTime(new Date(System.currentTimeMillis() + 3600 * 1000 * 5)) // 5 hours
-                .build();
 
-        // Create HMAC signer
-        JWSSigner signer = new MACSigner(JWT_SECRET.getBytes());
-
-        // Prepare JWS object
-        SignedJWT signedJWT = new SignedJWT(
-                new JWSHeader(JWSAlgorithm.HS256),
-                claims
-        );
-
-        // Compute the HMAC signature
-        signedJWT.sign(signer);
-
-        // Serialize to compact form
-        return signedJWT.serialize();
-    }
-
-    private String generateInvalidJwt() {
-        String header = base64UrlEncode("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes());
-
-        long now = System.currentTimeMillis() / 1000;
-        String payload = base64UrlEncode(
-                ("{\"sub\":\"test-user\",\"scope\":\"read write\",\"iat\":" + now +
-                        ",\"exp\":" + (now + 3600) + "}").getBytes());
-
-        String content = header + "." + payload;
-        byte[] signature = hmacSha256(content.getBytes(), "wrong-secret".getBytes());
-        String encodedSignature = base64UrlEncode(signature);
-
-        return header + "." + payload + "." + encodedSignature;
-    }
-
-    private String base64UrlEncode(byte[] data) {
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(data);
-    }
-
-    private byte[] hmacSha256(byte[] data, byte[] key) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(key, "HmacSHA256"));
-            return mac.doFinal(data);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create HMAC-SHA256 signature", e);
-        }
-    }
 }

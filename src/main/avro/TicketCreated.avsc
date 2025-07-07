@@ -1,0 +1,51 @@
+{
+  "type": "record",
+  "name": "TicketCreated",
+  "namespace": "com.pleased.ticket.dispatcher.server.model.events",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": {
+        "type": "bytes",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "ticketId",
+      "type": {
+        "type": "bytes",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "subject",
+      "type": "string"
+    },
+    {
+      "name": "description",
+      "type": ["null", "string"],
+      "default": null
+    },
+    {
+      "name": "userId",
+      "type": {
+        "type": "bytes",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "projectId",
+      "type": {
+        "type": "bytes",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "createdAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    }
+  ]
+}

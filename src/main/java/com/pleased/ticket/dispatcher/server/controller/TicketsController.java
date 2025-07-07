@@ -6,19 +6,16 @@
 package com.pleased.ticket.dispatcher.server.controller;
 
 import com.pleased.ticket.dispatcher.server.delegate.TicketsDelegate;
-import com.pleased.ticket.dispatcher.server.exception.TicketNotFoundException;
 import com.pleased.ticket.dispatcher.server.model.rest.*;
 import io.swagger.annotations.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import javax.validation.Valid;
-import javax.validation.ValidationException;
+import java.util.UUID;
 
 @javax.annotation.Generated(value = "com.glic.GentiSpringCodegen", date = "2025-06-29T19:50:29.045+02:00")
 
@@ -49,24 +46,20 @@ public class TicketsController {
             produces = {"application/json"},
             consumes = {"application/json"})
     public Mono<ResponseEntity<TicketResponse>> createTicket(
-            @ApiParam(value = "Bearer access token", required = true)
-            @RequestHeader(value = "Authorization", required = true) String authorization,
-
             @ApiParam(value = "", required = true)
             @Valid @RequestBody TicketCreateRequest body,
 
             @ApiParam(value = "")
-            @RequestHeader(value = "X-Correlation-ID", required = false) String xCorrelationID,
+            @RequestHeader(value = "X-Correlation-ID", required = false) UUID xCorrelationID,
 
             @ApiParam(value = "")
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader(value = "Idempotency-Key", required = true) UUID idempotencyKey,
 
             @ApiParam(value = "")
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
-        return ticketsDelegate.createTicket(body,authorization, xCorrelationID, idempotencyKey, userAgent)
-                .map(response -> ResponseEntity.ok(response))
-                .onErrorMap(this::mapToHttpException);
+        return ticketsDelegate.createTicket(body, xCorrelationID, idempotencyKey, userAgent)
+                .map(response -> ResponseEntity.ok(response));
     }
 
     @ApiOperation(value = "Assign a ticket to a user", nickname = "assignTicket", notes = "", response = TicketAssignmentResponse.class, authorizations = {
@@ -100,8 +93,7 @@ public class TicketsController {
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
         return ticketsDelegate.assignTicket(body, ticketID, xCorrelationID, idempotencyKey, userAgent)
-                .map(response -> ResponseEntity.ok(response))
-                .onErrorMap(this::mapToHttpException);
+                .map(response -> ResponseEntity.ok(response));
     }
 
     @ApiOperation(value = "Update the status of a ticket", nickname = "updateTicketStatus", notes = "", response = TicketStatusResponse.class, authorizations = {
@@ -135,8 +127,7 @@ public class TicketsController {
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
         return ticketsDelegate.updateTicketStatus(body,  ticketID, xCorrelationID, idempotencyKey, userAgent)
-                .map(response -> ResponseEntity.ok(response))
-                .onErrorMap(this::mapToHttpException);
+                .map(response -> ResponseEntity.ok(response));
     }
 
     @ApiOperation(value = "Update ticket details", nickname = "updateTicketDetails", notes = "", response = TicketResponse.class, authorizations = {
@@ -164,25 +155,12 @@ public class TicketsController {
             @RequestHeader(value = "X-Correlation-ID", required = false) String xCorrelationID,
 
             @ApiParam(value = "")
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader(value = "Idempotency-Key", required = true) String idempotencyKey,
 
             @ApiParam(value = "")
             @RequestHeader(value = "User-Agent", required = false) String userAgent) {
 
         return ticketsDelegate.updateTicketDetails(body, ticketID, xCorrelationID, idempotencyKey, userAgent)
-                .map(response -> ResponseEntity.ok(response))
-                .onErrorMap(this::mapToHttpException);
-    }
-
-
-    private Throwable mapToHttpException(Throwable throwable) {
-        // Map business exceptions to appropriate HTTP status codes
-        if (throwable instanceof ValidationException) {
-            return new ResponseStatusException(HttpStatus.BAD_REQUEST, throwable.getMessage());
-        }
-        if (throwable instanceof TicketNotFoundException) {
-            return new ResponseStatusException(HttpStatus.NOT_FOUND, throwable.getMessage());
-        }
-        return new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error");
+                .map(response -> ResponseEntity.ok(response));
     }
 }

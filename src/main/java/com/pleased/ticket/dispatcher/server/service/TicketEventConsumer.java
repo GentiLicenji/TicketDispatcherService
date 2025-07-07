@@ -1,88 +1,101 @@
 package com.pleased.ticket.dispatcher.server.service;
 
 import com.pleased.ticket.dispatcher.server.exception.EntityNotFoundException;
-import com.pleased.ticket.dispatcher.server.model.api.TicketStatusEnum;
 import com.pleased.ticket.dispatcher.server.model.dto.TicketEntity;
 import com.pleased.ticket.dispatcher.server.model.events.TicketAssigned;
 import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
 import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
+import com.pleased.ticket.dispatcher.server.model.rest.TicketResponse;
 import com.pleased.ticket.dispatcher.server.repository.TicketRepository;
+import com.pleased.ticket.dispatcher.server.util.mapper.UUIDConverter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.messaging.handler.annotation.Header;
-import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
+import javax.annotation.PostConstruct;
+import java.nio.ByteBuffer;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 @Slf4j
 @Service
-@KafkaListener(topics = {"ticket-create.v1", "ticket-assignments.v1", "ticket-updates.v1"})
 public class TicketEventConsumer {
 
     private final TicketRepository ticketRepository;
 
+    private final ReactiveKafkaConsumerTemplate<ByteBuffer, TicketCreated> reactiveTicketCreatedConsumer;
+    private final ReactiveKafkaConsumerTemplate<ByteBuffer, TicketAssigned> reactiveTicketAssignmentConsumer;
+    private final ReactiveKafkaConsumerTemplate<ByteBuffer, TicketStatusUpdated> reactiveTicketUpdateConsumer;
+
     @Autowired
-    public TicketEventConsumer(TicketRepository ticketRepository) {
+    public TicketEventConsumer(TicketRepository ticketRepository, ReactiveKafkaConsumerTemplate<ByteBuffer, TicketCreated> reactiveTicketCreatedConsumer, ReactiveKafkaConsumerTemplate<ByteBuffer, TicketAssigned> reactiveTicketAssignmentConsumer, ReactiveKafkaConsumerTemplate<ByteBuffer, TicketStatusUpdated> reactiveTicketUpdateConsumer) {
         this.ticketRepository = ticketRepository;
+        this.reactiveTicketCreatedConsumer = reactiveTicketCreatedConsumer;
+        this.reactiveTicketAssignmentConsumer = reactiveTicketAssignmentConsumer;
+        this.reactiveTicketUpdateConsumer = reactiveTicketUpdateConsumer;
     }
 
-    @KafkaListener(
-            topics = "ticket-create.v1",
-            groupId = "ticket-service-create-consumer",
-            containerFactory = "kafkaListenerContainerFactory"
-    )
-    @Transactional(transactionManager = "kafkaTransactionManager")
-    public Mono<Void> handleTicketCreated(
-            @Payload TicketCreated event,
-            @Header("kafka_receivedTopic") String topic,
-            @Header("kafka_receivedPartition") int partition,
-            @Header("kafka_offset") long offset) {
+    @PostConstruct
+    public void startConsuming() {
+        //Start create consumer
+        reactiveTicketCreatedConsumer.receiveAutoAck()
+                .doOnNext(record -> log.info("Processing ticket creation: {}", record.value()))
+                .flatMap(this::handleTicketCreated)
+                .doOnError(error -> log.error("Error processing ticket creation", error))
+                .retry(3)
+                .subscribe();
 
-        log.info("Processing TicketCreated event: ticketId={}, topic={}, partition={}, offset={}",
-                event.getTicketId(), topic, partition, offset);
+        // Start assignment consumer
+        reactiveTicketAssignmentConsumer.receiveAutoAck()
+                .doOnNext(record -> log.info("Processing ticket assignment: {}", record.value()))
+                .flatMap(this::handleTicketAssigned)
+                .doOnError(error -> log.error("Error processing assignment", error))
+                .retry(3)
+                .subscribe();
 
-        return Mono.fromCallable(() -> {
-                    TicketEntity entity = new TicketEntity();
-                    entity.setTicketId(event.getTicketId());
-                    entity.setSubject(event.getSubject());
-                    entity.setDescription(event.getDescription());
-                    entity.setStatus(TicketStatusEnum.OPEN.toString()); // Default status for new tickets
-                    entity.setCreatedAt(OffsetDateTime.now());
-                    entity.setUserId(event.getUserId());
-                    entity.setProjectId(event.getProjectId());
+        // Start update consumer
+        reactiveTicketUpdateConsumer.receiveAutoAck()
+                .doOnNext(record -> log.info("Processing ticket update: {}", record.value()))
+                .flatMap(this::handleTicketStatusUpdated)
+                .doOnError(error -> log.error("Error processing ticket update", error))
+                .retry(3)
+                .subscribe();
+    }
 
-                    return entity;
-                })
-                .flatMap(ticketRepository::save)
-                .doOnSuccess(saved -> log.info("Successfully created ticket in DB: {}", saved.getTicketId()))
+    public Mono<Void> handleTicketCreated(ConsumerRecord<ByteBuffer, TicketCreated> record) {
+
+        TicketCreated event = record.value();
+
+        // Create entity directly in the reactive chain
+        TicketEntity entity = new TicketEntity();
+        entity.setTicketId(UUIDConverter.bytesToUUID(event.getTicketId()));
+        entity.setSubject(event.getSubject());
+        entity.setDescription(event.getDescription());
+        entity.setStatus(TicketResponse.StatusEnum.OPEN.toString());
+        entity.setCreatedAt(OffsetDateTime.now());
+        entity.setUserId(UUIDConverter.bytesToUUID(event.getUserId()));
+        entity.setProjectId(UUIDConverter.bytesToUUID(event.getProjectId()));
+
+
+        return ticketRepository.save(entity)
+                .doOnSubscribe(subscription -> log.info("Someone subscribed to the save operation!"))
+                .doOnNext(saved -> log.info("Successfully created ticket in DB: {}", saved.getTicketId()))
                 .doOnError(error -> log.error("Failed to create ticket: {}", event.getTicketId(), error))
-                .then();
+                .then(); // Convert Mono<TicketEntity> to Mono<Void>
     }
 
-    @KafkaListener(
-            topics = "ticket-assignments.v1",
-            groupId = "ticket-service-assignment-consumer",
-            containerFactory = "kafkaListenerContainerFactory"
-    )
-    @Transactional(transactionManager = "kafkaTransactionManager")
-    public Mono<Void> handleTicketAssigned(
-            @Payload TicketAssigned event,
-            @Header("kafka_receivedTopic") String topic,
-            @Header("kafka_receivedPartition") int partition,
-            @Header("kafka_offset") long offset) {
+    public Mono<Void> handleTicketAssigned(ConsumerRecord<ByteBuffer, TicketAssigned> record) {
 
-        log.info("Processing TicketAssigned event: ticketId={}, assigneeId={}, topic={}, partition={}, offset={}",
-                event.getTicketId(), event.getAssigneeId(), topic, partition, offset);
+        TicketAssigned event = record.value();
 
-        return ticketRepository.findById(event.getTicketId())
-                .switchIfEmpty(Mono.error(new EntityNotFoundException("Ticket not found: " + event.getTicketId())))
+        return ticketRepository.findById(UUIDConverter.bytesToUUID(event.getTicketId()))
+                .switchIfEmpty(Mono.error(new EntityNotFoundException("Ticket not found: " + UUIDConverter.bytesToUUID(event.getTicketId()))))
                 .flatMap(ticket -> {
-                    ticket.setAssigneeId(event.getAssigneeId());
-                    ticket.setUpdatedAt(event.getAssignedAt());
+                    ticket.setAssigneeId(UUIDConverter.bytesToUUID(event.getAssigneeId()));
+                    ticket.setUpdatedAt(event.getAssignedAt().atOffset(ZoneOffset.UTC));
 
                     // Mark as not new since we're updating
                     ticket.setNew(false);
@@ -94,26 +107,15 @@ public class TicketEventConsumer {
                 .then();
     }
 
-    @KafkaListener(
-            topics = "ticket-updates.v1",
-            groupId = "ticket-service-update-consumer",
-            containerFactory = "kafkaListenerContainerFactory"
-    )
-    @Transactional(transactionManager = "kafkaTransactionManager")
-    public Mono<Void> handleTicketStatusUpdated(
-            @Payload TicketStatusUpdated event,
-            @Header("kafka_receivedTopic") String topic,
-            @Header("kafka_receivedPartition") int partition,
-            @Header("kafka_offset") long offset) {
+    public Mono<Void> handleTicketStatusUpdated(ConsumerRecord<ByteBuffer, TicketStatusUpdated> record) {
 
-        log.info("Processing TicketStatusUpdated event: ticketId={}, status={}, topic={}, partition={}, offset={}",
-                event.getTicketId(), event.getStatus(), topic, partition, offset);
+        TicketStatusUpdated event = record.value();
 
-        return ticketRepository.findById(event.getTicketId())
-                .switchIfEmpty(Mono.error(new EntityNotFoundException("Ticket not found: " + event.getTicketId())))
+        return ticketRepository.findById(UUIDConverter.bytesToUUID(event.getTicketId()))
+                .switchIfEmpty(Mono.error(new EntityNotFoundException("Ticket not found: " +  UUIDConverter.bytesToUUID(event.getTicketId()))))
                 .flatMap(ticket -> {
                     ticket.setStatus(event.getStatus().toUpperCase());
-                    ticket.setUpdatedAt(event.getUpdatedAt());
+                    ticket.setUpdatedAt(event.getUpdatedAt().atOffset(ZoneOffset.UTC));
 
                     // Mark as not new since we're updating
                     ticket.setNew(false);

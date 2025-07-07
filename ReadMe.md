@@ -221,8 +221,10 @@ This module includes integration and component-level tests under [`/src/test/jav
 * [`TicketsAPIE2ETest`](src/test/java/com/pleased/ticket/dispatcher/server/TicketsAPIE2ETest.java): Simulates full API behavior using `WebTestClient`. Includes a custom Kafka consumer to validate emitted events for correctness.
 
 ### 🌐 Controller Layer
+These are slice integration tests that load a partial Spring context, focused on controller behavior (with filters, core services and delegates), but excluding services like Kafka, databases, etc.
 
-* [`TicketsControllerIT`](src/test/java/com/pleased/ticket/dispatcher/server/controller/TicketsControllerIT.java): Uses `WebTestClient` to test API success/failure responses and Kafka event side-effects.
+* [`TicketsControllerPositiveIT`](src/test/java/com/pleased/ticket/dispatcher/server/controller/TicketsControllerPositiveIT.java): Uses `WebTestClient` to test API success responses.
+* [`TicketsControllerNegativeIT`](src/test/java/com/pleased/ticket/dispatcher/server/controller/TicketsControllerNegativeIT.java): Uses `WebTestClient` to test API failure responses.
 * [`TicketsControllerAuthIT`](src/test/java/com/pleased/ticket/dispatcher/server/controller/TicketsControllerAuthIT.java): Covers authentication and authorization scenarios.
 
 ### 🧪 Service Layer

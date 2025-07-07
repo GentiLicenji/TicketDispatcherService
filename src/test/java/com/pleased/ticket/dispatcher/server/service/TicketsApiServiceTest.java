@@ -4,6 +4,8 @@ import com.pleased.ticket.dispatcher.server.model.api.*;
 import com.pleased.ticket.dispatcher.server.model.events.TicketAssigned;
 import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
 import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
+import com.pleased.ticket.dispatcher.server.util.mapper.EventMapperImpl;
+import com.pleased.ticket.dispatcher.server.util.mapper.UUIDConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.annotation.Import;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -26,6 +29,7 @@ import static org.mockito.Mockito.*;
  * Mocks all external components and checks for code invocation.
  */
 @ExtendWith(MockitoExtension.class)
+@Import({EventMapperImpl.class}) // import the generated impl class
 public class TicketsApiServiceTest {
 
     @Mock
@@ -44,12 +48,13 @@ public class TicketsApiServiceTest {
 
     @BeforeEach
     void setUp() {
-        ticketsApiService = new TicketsApiService(eventProducer);
+        EventMapperImpl eventMapper = new EventMapperImpl();
+        ticketsApiService = new TicketsApiService(eventProducer, eventMapper);
 
         // Setup default behavior for mocks with lenient to allow unused stubbings
-        lenient().when(eventProducer.publishTicketCreated(any())).thenReturn(Mono.empty());
-        lenient().when(eventProducer.publishTicketAssigned(any())).thenReturn(Mono.empty());
-        lenient().when(eventProducer.publishTicketStatusUpdated(any())).thenReturn(Mono.empty());
+        lenient().when(eventProducer.publishTicketCreated(any(), any())).thenReturn(Mono.empty());
+        lenient().when(eventProducer.publishTicketAssigned(any(), any())).thenReturn(Mono.empty());
+        lenient().when(eventProducer.publishTicketStatusUpdated(any(), any())).thenReturn(Mono.empty());
     }
 
     @Test
@@ -79,14 +84,13 @@ public class TicketsApiServiceTest {
         assertEquals(TicketStatusEnum.OPEN.toString(), response.getStatus());
         assertNotNull(response.getCreatedAt());
 
-        verify(eventProducer).publishTicketCreated(ticketCreatedCaptor.capture());
+        verify(eventProducer).publishTicketCreated(ticketCreatedCaptor.capture(), eq(correlationId));
         TicketCreated capturedEvent = ticketCreatedCaptor.getValue();
-        assertEquals(ticketId, capturedEvent.getTicketId());
+        assertEquals(ticketId, UUIDConverter.bytesToUUID(capturedEvent.getTicketId()));
         assertEquals(request.getSubject(), capturedEvent.getSubject());
         assertEquals(request.getDescription(), capturedEvent.getDescription());
-        assertEquals(request.getUserId(), capturedEvent.getUserId());
-        assertEquals(correlationId, capturedEvent.getCorrelationId());
-        assertEquals(ticketId, capturedEvent.getEventId());
+        assertEquals(request.getUserId(), UUIDConverter.bytesToUUID(capturedEvent.getUserId()));
+        assertEquals(ticketId, UUIDConverter.bytesToUUID(capturedEvent.getEventId()));
         assertNotNull(capturedEvent.getCreatedAt());
     }
 
@@ -113,12 +117,11 @@ public class TicketsApiServiceTest {
         assertEquals(assigneeId, response.getAssigneeId());
         assertNotNull(response.getAssignedAt());
 
-        verify(eventProducer).publishTicketAssigned(ticketAssignedCaptor.capture());
+        verify(eventProducer).publishTicketAssigned(ticketAssignedCaptor.capture(),  eq(correlationId));
         TicketAssigned capturedEvent = ticketAssignedCaptor.getValue();
-        assertEquals(ticketId, capturedEvent.getTicketId());
-        assertEquals(assigneeId, capturedEvent.getAssigneeId());
-        assertEquals(correlationId, capturedEvent.getCorrelationId());
-        assertEquals(idempotencyKey, capturedEvent.getEventId());
+        assertEquals(ticketId,UUIDConverter.bytesToUUID( capturedEvent.getTicketId()));
+        assertEquals(assigneeId, UUIDConverter.bytesToUUID(capturedEvent.getAssigneeId()));
+        assertEquals(idempotencyKey, UUIDConverter.bytesToUUID(capturedEvent.getEventId()));
         assertNotNull(capturedEvent.getAssignedAt());
     }
 
@@ -145,12 +148,11 @@ public class TicketsApiServiceTest {
         assertEquals(newStatus, response.getStatus());
         assertNotNull(response.getUpdatedAt());
 
-        verify(eventProducer).publishTicketStatusUpdated(ticketStatusUpdatedCaptor.capture());
+        verify(eventProducer).publishTicketStatusUpdated(ticketStatusUpdatedCaptor.capture(), eq(correlationId));
         TicketStatusUpdated capturedEvent = ticketStatusUpdatedCaptor.getValue();
-        assertEquals(ticketId, capturedEvent.getTicketId());
+        assertEquals(ticketId, UUIDConverter.bytesToUUID(capturedEvent.getTicketId()));
         assertEquals(newStatus, capturedEvent.getStatus());
-        assertEquals(correlationId, capturedEvent.getCorrelationId());
-        assertEquals(idempotencyKey, capturedEvent.getEventId());
+        assertEquals(idempotencyKey,UUIDConverter.bytesToUUID( capturedEvent.getEventId()));
         assertNotNull(capturedEvent.getUpdatedAt());
     }
 
@@ -167,13 +169,13 @@ public class TicketsApiServiceTest {
         request.setProjectId(UUID.randomUUID());
 
         // Setup mock to return error
-        when(eventProducer.publishTicketCreated(any())).thenReturn(Mono.error(new RuntimeException("Test error")));
+        when(eventProducer.publishTicketCreated(any(), any())).thenReturn(Mono.error(new RuntimeException("Test error")));
 
         // Act & Assert - should propagate the error
         assertThrows(RuntimeException.class, () -> {
             ticketsApiService.createTicket(request).block(Duration.ofSeconds(5));
         });
 
-        verify(eventProducer).publishTicketCreated(any());
+        verify(eventProducer).publishTicketCreated(any(), any());
     }
 }

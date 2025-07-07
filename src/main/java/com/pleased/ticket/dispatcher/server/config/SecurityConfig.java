@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
-    private static final String JWT_SECRET = "a-string-secret-at-least-256-bits-long";
+    public static final String JWT_SECRET = "a-string-secret-at-least-256-bits-long";
 
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {

@@ -17,6 +17,9 @@ public interface TicketsMapper {
     // Assignment mapping methods
     @Mapping(source = "assigneeId", target = "assigneeId", qualifiedByName = "stringToUUID")
     TicketAssignmentAPIRequest fromRestToAPIAssignmentRequest(TicketAssignmentRequest restRequest);
+    @Mapping(target = "ticketId", source = "ticketID", qualifiedByName = "uuidToString")
+    @Mapping(target = "assignedAt", source = "assignedAt")
+    @Mapping(target = "assignee.userId", source = "assigneeId", qualifiedByName = "uuidToString")
     TicketAssignmentResponse fromAPIToRestAssignmentResponse(TicketAssignmentAPIResponse apiResponse);
 
     // Create mapping methods

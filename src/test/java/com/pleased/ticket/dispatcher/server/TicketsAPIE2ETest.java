@@ -1,86 +1,113 @@
 package com.pleased.ticket.dispatcher.server;
 
-import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
-import com.pleased.ticket.dispatcher.server.model.rest.TicketCreateRequest;
-import com.pleased.ticket.dispatcher.server.model.rest.TicketResponse;
-import org.apache.kafka.clients.consumer.*;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import com.nimbusds.jose.JOSEException;
+import com.pleased.ticket.dispatcher.server.model.dto.ProjectEntity;
+import com.pleased.ticket.dispatcher.server.model.dto.UserEntity;
+import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
+import com.pleased.ticket.dispatcher.server.model.rest.*;
+import com.pleased.ticket.dispatcher.server.repository.ProjectRepository;
+import com.pleased.ticket.dispatcher.server.repository.TicketRepository;
+import com.pleased.ticket.dispatcher.server.repository.UserRepository;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
+import reactor.test.StepVerifier;
 
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Properties;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@ActiveProfiles("test")
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Disabled("To be triggered manually.Integration tests depend on a live Kafka instance (broker) to validate producer/consumer behavior.")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS) //Enforces JUnit 5 to reuse a single instance of the test class for all test methods
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class) // Enforces Junit 5 to preserve execution order
 public class TicketsAPIE2ETest {
 
     @LocalServerPort
     private int port;
 
     @Autowired
+    private TicketRepository ticketRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ProjectRepository projectRepository;
+
+    @Autowired
     private WebTestClient webTestClient;
 
-    private Consumer<String, Object> kafkaConsumer;
-    private static final String TICKET_CREATE_TOPIC = "ticket-create.v1";
-    private static final String TICKET_ASSIGNMENTS_TOPIC = "ticket-assignments.v1";
-    private static final String TICKET_UPDATES_TOPIC = "ticket-updates.v1";
-    private static final String TEST_GROUP_ID = "test-consumer-group";
+    private static UUID ticketId;
+    private static UUID userId;
+    private static UUID projectId;
+    private static UUID assigneeId;
 
-    @BeforeEach
+    /**
+     * Create the required user,assignee and project for all tests.
+     * <p>
+     * Note: even though H2 is an in memory db, and it shouldn't persist data.
+     * Spring test stores the same context between all test calls.
+     */
+    @BeforeAll
     void setUp() {
-        // Configure Kafka consumer
-        Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, TEST_GROUP_ID);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.pleased.ticket.dispatcher.server.model.events");
-        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.pleased.ticket.dispatcher.server.model.events.TicketEvent");
+        //Cleanup from previous runs
+        ticketRepository.deleteAll().block();
+        userRepository.deleteAll().block();
+        projectRepository.deleteAll().block();
 
-        kafkaConsumer = new KafkaConsumer<>(props);
-        kafkaConsumer.subscribe(Arrays.asList(TICKET_CREATE_TOPIC, TICKET_ASSIGNMENTS_TOPIC, TICKET_UPDATES_TOPIC));
+        userId = UUID.randomUUID();
+        projectId = UUID.randomUUID();
+        assigneeId = UUID.randomUUID();
+
+        //Creating db entries for test setup
+        UserEntity pmUser = new UserEntity();
+        pmUser.setUserId(userId);
+        pmUser.setEmail("test@example.com");
+        pmUser.setName("Test PM");
+
+        UserEntity devUser = new UserEntity();
+        devUser.setUserId(assigneeId);
+        devUser.setEmail("test@example.com");
+        devUser.setName("Test Dev");
+
+        ProjectEntity project = new ProjectEntity();
+        project.setProjectId(projectId);
+        project.setTitle("Test Project");
+
+        // Save dependencies first
+        userRepository.save(pmUser).block();
+        userRepository.save(devUser).block();
+        projectRepository.save(project).block();
     }
 
-    @AfterEach
-    void tearDown() {
-        if (kafkaConsumer != null) {
-            kafkaConsumer.close();
-        }
-    }
-
+    /**
+     * ******************
+     * Positive Scenarios
+     * ******************
+     */
     @Test
-    void createTicket_ShouldReturnOkAndPublishEvent() {
-        // Arrange
-        UUID ticketId = UUID.randomUUID();
-        UUID projectId = UUID.randomUUID();
-        UUID correlationId = UUID.randomUUID();
+    @Order(1)
+    void createTicket_WithValidPayloadAndAuth_ShouldReturnOkAndStoreToDB() throws JOSEException {
 
         TicketCreateRequest request = new TicketCreateRequest();
         request.setSubject("Test Ticket");
         request.setDescription("This is a test ticket");
         request.setProjectId(projectId.toString());
 
-        // Act - No Authorization header needed for local dev
+        // Act
         webTestClient.post()
                 .uri("http://localhost:" + port + "/api/v1/tickets")
-                .header("X-Correlation-ID", correlationId.toString())
-                .header("Idempotency-Key", ticketId.toString())
+                .header("Authorization", "Bearer " + TestUtil.generateValidJwt(userId.toString()))
+                .header("X-Correlation-ID", UUID.randomUUID().toString())
+                .header("Idempotency-Key", UUID.randomUUID().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(request))
                 .exchange()
@@ -93,27 +120,109 @@ public class TicketsAPIE2ETest {
                     assertEquals(request.getSubject(), response.getSubject());
                     assertEquals(request.getDescription(), response.getDescription());
                     assertEquals(projectId.toString(), response.getProjectId());
-                    assertEquals("OPEN", response.getStatus().toString());
+                    assertEquals(TicketResponse.StatusEnum.OPEN.toString(), response.getStatus().toString());
+                    ticketId = UUID.fromString(response.getTicketId());
                 });
 
-        // Verify Kafka event
-        ConsumerRecords<String, Object> records = kafkaConsumer.poll(Duration.ofSeconds(5));
-        boolean eventFound = false;
-        Iterator<ConsumerRecord<String, Object>> iterator = records.iterator();
-        while (iterator.hasNext()) {
-            ConsumerRecord<String, Object> record = iterator.next();
-            if (TICKET_CREATE_TOPIC.equals(record.topic()) && record.value() instanceof TicketCreated) {
-                TicketCreated event = (TicketCreated) record.value();
-                assertEquals(ticketId, event.getTicketId());
-                assertEquals(request.getSubject(), event.getSubject());
-                assertEquals(request.getDescription(), event.getDescription());
-                assertEquals(projectId, event.getProjectId());
-                assertEquals(correlationId, event.getCorrelationId());
-                eventFound = true;
-                break;
-            }
+        System.out.println("Looking for ticket with ID: " + ticketId);//temp
+
+        // Wait for async processing
+        try {
+            Thread.sleep(5000); // 1 second should be enough
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
-        assertTrue(eventFound, "TicketCreated event not found in Kafka");
+
+        // Assert - Query real database
+        StepVerifier.create(ticketRepository.findById(ticketId))
+                .assertNext(savedTicket -> {
+                    assertThat(savedTicket.getTicketId()).isEqualTo(ticketId);
+                    assertThat(savedTicket.getSubject()).isEqualTo("Test Ticket");
+                    assertThat(savedTicket.getDescription()).isEqualTo("This is a test ticket");
+                    assertThat(savedTicket.getUserId()).isEqualTo(userId);
+                    assertThat(savedTicket.getProjectId()).isEqualTo(projectId);
+                    assertThat(savedTicket.getStatus()).isEqualTo(TicketResponse.StatusEnum.OPEN.toString());
+                    assertThat(savedTicket.getCreatedAt()).isNotNull();
+                    assertThat(savedTicket.getUpdatedAt()).isNull();
+                    assertThat(savedTicket.getAssigneeId()).isNull();
+                })
+                .verifyComplete();
     }
 
+    @Test
+    @Order(2)
+    void assignTicket_WithValidAuth_ShouldReturnOkAndStoreToDB() throws JOSEException {
+
+        TicketAssignmentRequest assignRequest = new TicketAssignmentRequest();
+        assignRequest.setAssigneeId(assigneeId.toString());
+
+        webTestClient.post()
+                .uri("http://localhost:" + port + "/api/v1/tickets/" + ticketId + "/assign")
+                .header("Authorization", "Bearer " + TestUtil.generateValidJwt())
+                .header("X-Correlation-ID", UUID.randomUUID().toString())
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(assignRequest))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(TicketAssignmentResponse.class)
+                .value(response -> {
+                    assertNotNull(response);
+                    assertEquals(ticketId.toString(), response.getTicketId());
+                    assertNotNull(response.getAssignedAt());
+                    assertNotNull(response.getAssignee());
+                    assertEquals(assigneeId.toString(), response.getAssignee().getUserId());
+                });
+
+        // Assert - Query real database
+        StepVerifier.create(ticketRepository.findById(ticketId))
+                .assertNext(assignedTicket -> {
+                    assertThat(assignedTicket.getAssigneeId()).isEqualTo(assigneeId);
+                    assertThat(assignedTicket.getSubject()).isEqualTo("Test Ticket");
+                    assertThat(assignedTicket.getDescription()).isEqualTo("This is a test ticket");
+                    assertThat(assignedTicket.getStatus()).isEqualTo(TicketResponse.StatusEnum.OPEN.toString());
+                    assertThat(assignedTicket.getUserId()).isEqualTo(userId);
+                    assertThat(assignedTicket.getProjectId()).isEqualTo(projectId);
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @Order(3)
+    void updateTicketStatus_WithValidAuth_ShouldReturnOkAndStoreToDB() throws JOSEException {
+
+        String expectedStatus=TicketResponse.StatusEnum.IN_PROGRESS.toString();
+
+        TicketStatusUpdated updateStatus = new TicketStatusUpdated();
+        updateStatus.setStatus(expectedStatus);
+
+        webTestClient.patch()
+                .uri("http://localhost:" + port + "/api/v1/tickets/" + ticketId + "/status")
+                .header("Authorization", "Bearer " + TestUtil.generateValidJwt())
+                .header("X-Correlation-ID", UUID.randomUUID().toString())
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(updateStatus))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(TicketStatusResponse.class)
+                .value(response -> {
+                    assertNotNull(response);
+                    assertEquals(ticketId.toString(), response.getTicketId());
+                    assertEquals(expectedStatus, response.getStatus());
+                    assertNotNull(response.getUpdatedAt());
+                });
+
+        // Assert - Query real database
+        StepVerifier.create(ticketRepository.findById(ticketId))
+                .assertNext(updatedTicket -> {
+                    assertThat(updatedTicket.getStatus()).isEqualTo(expectedStatus);
+                    assertThat(updatedTicket.getAssigneeId()).isEqualTo(assigneeId);
+                    assertThat(updatedTicket.getSubject()).isEqualTo("Test Ticket");
+                    assertThat(updatedTicket.getDescription()).isEqualTo("This is a test ticket");
+                    assertThat(updatedTicket.getUserId()).isEqualTo(userId);
+                    assertThat(updatedTicket.getProjectId()).isEqualTo(projectId);
+                })
+                .verifyComplete();
+    }
 }

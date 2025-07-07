@@ -48,11 +48,13 @@ parameters:
     in: header
     required: false
     type: string
+    format: uuid
   Idempotency-Key:
     name: Idempotency-Key
     in: header
-    required: false
+    required: true
     type: string
+    format: uuid
   User-Agent:
     name: User-Agent
     in: header
@@ -220,10 +222,15 @@ definitions:
     properties:
       subject:
         type: string
+        minimum: 1
+        maximum: 250
       description:
         type: string
+        minimum: 1
+        maximum: 5000
       projectId:
         type: string
+        format: uuid
   TicketResponse:
     type: object
     properties:
@@ -237,7 +244,7 @@ definitions:
         type: string
       status:
         type: string
-        enum: [ open, in_progress, closed ]
+        enum: [open,in_progress,resolved,closed]
       priority:
         type: string
         enum: [ low, medium, high, urgent ]
@@ -262,7 +269,8 @@ definitions:
         type: object
         properties:
           userId:
-            type: integer
+            type: string
+            format: uuid
           name:
             type: string
           role:
@@ -297,10 +305,8 @@ definitions:
         format: date-time
   TicketAssignmentRequest:
     type: object
-    required: [ ticketId, assigneeId ]
+    required: [ assigneeId ]
     properties:
-      ticketId:
-        type: string
       assigneeId:
         type: string
   TicketStatusRequest:
@@ -309,3 +315,4 @@ definitions:
     properties:
       status:
         type: string
+        enum: [open,in_progress,resolved,closed]

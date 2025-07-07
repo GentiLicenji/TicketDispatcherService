@@ -1,0 +1,32 @@
+{
+  "type": "record",
+  "name": "TicketStatusUpdated",
+  "namespace": "com.pleased.ticket.dispatcher.server.model.events",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": {
+        "type": "bytes",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "ticketId",
+      "type": {
+        "type": "bytes",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "status",
+      "type": "string"
+    },
+    {
+      "name": "updatedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    }
+  ]
+}

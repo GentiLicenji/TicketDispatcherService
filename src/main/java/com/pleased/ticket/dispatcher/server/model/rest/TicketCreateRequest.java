@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiModelProperty;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.util.Objects;
 
 /**
@@ -35,8 +36,7 @@ public class TicketCreateRequest   {
   **/
   @ApiModelProperty(required = true, value = "")
   @NotNull
-
-
+  @Size(min = 1, max = 250, message = "Subject must be between 1 and 250 characters")
   public String getSubject() {
     return subject;
   }
@@ -56,8 +56,7 @@ public class TicketCreateRequest   {
   **/
   @ApiModelProperty(required = true, value = "")
   @NotNull
-
-
+  @Size(min = 1, max = 5000, message = "Subject must be between 1 and 5000 characters")
   public String getDescription() {
     return description;
   }
