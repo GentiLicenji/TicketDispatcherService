@@ -269,7 +269,8 @@ definitions:
         type: object
         properties:
           userId:
-            type: integer
+            type: string
+            format: uuid
           name:
             type: string
           role:
@@ -304,10 +305,8 @@ definitions:
         format: date-time
   TicketAssignmentRequest:
     type: object
-    required: [ ticketId, assigneeId ]
+    required: [ assigneeId ]
     properties:
-      ticketId:
-        type: string
       assigneeId:
         type: string
   TicketStatusRequest:

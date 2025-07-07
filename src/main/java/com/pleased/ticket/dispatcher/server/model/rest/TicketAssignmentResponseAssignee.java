@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiModelProperty;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * TicketAssignmentResponseAssignee
@@ -15,7 +16,7 @@ import java.util.Objects;
 
 public class TicketAssignmentResponseAssignee   {
   @JsonProperty("userId")
-  private Integer userId = null;
+  private String userId = null;
 
   @JsonProperty("name")
   private String name = null;
@@ -23,7 +24,7 @@ public class TicketAssignmentResponseAssignee   {
   @JsonProperty("role")
   private String role = null;
 
-  public TicketAssignmentResponseAssignee userId(Integer userId) {
+  public TicketAssignmentResponseAssignee userId(String userId) {
     this.userId = userId;
     return this;
   }
@@ -35,11 +36,11 @@ public class TicketAssignmentResponseAssignee   {
   @ApiModelProperty(value = "")
 
 
-  public Integer getUserId() {
+  public String getUserId() {
     return userId;
   }
 
-  public void setUserId(Integer userId) {
+  public void setUserId(String userId) {
     this.userId = userId;
   }
 

@@ -6,19 +6,15 @@
 package com.pleased.ticket.dispatcher.server.controller;
 
 import com.pleased.ticket.dispatcher.server.delegate.TicketsDelegate;
-import com.pleased.ticket.dispatcher.server.exception.TicketNotFoundException;
 import com.pleased.ticket.dispatcher.server.model.rest.*;
 import io.swagger.annotations.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import javax.validation.Valid;
-import javax.validation.ValidationException;
 import java.util.UUID;
 
 @javax.annotation.Generated(value = "com.glic.GentiSpringCodegen", date = "2025-06-29T19:50:29.045+02:00")
