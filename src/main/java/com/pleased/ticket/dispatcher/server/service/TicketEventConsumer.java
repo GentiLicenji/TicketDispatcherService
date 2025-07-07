@@ -11,11 +11,12 @@ import com.pleased.ticket.dispatcher.server.util.mapper.UUIDConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import javax.annotation.PostConstruct;
 import java.nio.ByteBuffer;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -38,7 +39,7 @@ public class TicketEventConsumer {
         this.reactiveTicketUpdateConsumer = reactiveTicketUpdateConsumer;
     }
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class) //Delays consumers to subscribe after the app context is ready.
     public void startConsuming() {
         //Start create consumer
         reactiveTicketCreatedConsumer.receiveAutoAck()
