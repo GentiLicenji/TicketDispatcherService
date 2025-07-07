@@ -3,10 +3,8 @@ package com.pleased.ticket.dispatcher.server;
 import com.nimbusds.jose.JOSEException;
 import com.pleased.ticket.dispatcher.server.model.dto.ProjectEntity;
 import com.pleased.ticket.dispatcher.server.model.dto.UserEntity;
-import com.pleased.ticket.dispatcher.server.model.rest.TicketAssignmentRequest;
-import com.pleased.ticket.dispatcher.server.model.rest.TicketAssignmentResponse;
-import com.pleased.ticket.dispatcher.server.model.rest.TicketCreateRequest;
-import com.pleased.ticket.dispatcher.server.model.rest.TicketResponse;
+import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
+import com.pleased.ticket.dispatcher.server.model.rest.*;
 import com.pleased.ticket.dispatcher.server.repository.ProjectRepository;
 import com.pleased.ticket.dispatcher.server.repository.TicketRepository;
 import com.pleased.ticket.dispatcher.server.repository.UserRepository;
@@ -15,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 import reactor.test.StepVerifier;
@@ -29,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Disabled("To be triggered manually.Integration tests depend on a live Kafka instance (broker) to validate producer/consumer behavior.")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS) //Enforces JUnit 5 to reuse a single instance of the test class for all test methods
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class) // Enforces Junit 5 to preserve execution order
 public class TicketsAPIE2ETest {
 
     @LocalServerPort
@@ -51,23 +50,22 @@ public class TicketsAPIE2ETest {
     private static UUID projectId;
     private static UUID assigneeId;
 
+    /**
+     * Create the required user,assignee and project for all tests.
+     * <p>
+     * Note: even though H2 is an in memory db, and it shouldn't persist data.
+     * Spring test stores the same context between all test calls.
+     */
     @BeforeAll
-    static void setUp() {
-        ticketId = UUID.randomUUID();
+    void setUp() {
+        //Cleanup from previous runs
+        ticketRepository.deleteAll().block();
+        userRepository.deleteAll().block();
+        projectRepository.deleteAll().block();
+
         userId = UUID.randomUUID();
         projectId = UUID.randomUUID();
         assigneeId = UUID.randomUUID();
-    }
-
-    /**
-     * Create the required user,assignee and project before each test run.
-     */
-    @BeforeEach
-    void setUpEach() {
-        //Clear db entries so we don't attempt double insertion.
-//        ticketRepository.deleteAll().block();
-        userRepository.deleteAll().block();
-        projectRepository.deleteAll().block();
 
         //Creating db entries for test setup
         UserEntity pmUser = new UserEntity();
@@ -91,24 +89,12 @@ public class TicketsAPIE2ETest {
     }
 
     /**
-     * Resets data for each test call.
-     * <p>
-     * Note: even though H2 is an in memory db, and it shouldn't persist data.
-     * Spring test stores the same context between all test calls.
-     */
-    @AfterEach
-    void tearDownEach() {
-        //Clear db entries so we don't attempt double insertion.
-        userRepository.deleteAll().block();
-        projectRepository.deleteAll().block();
-    }
-
-    /**
      * ******************
      * Positive Scenarios
      * ******************
      */
     @Test
+    @Order(1)
     void createTicket_WithValidPayloadAndAuth_ShouldReturnOkAndStoreToDB() throws JOSEException {
 
         TicketCreateRequest request = new TicketCreateRequest();
@@ -119,7 +105,7 @@ public class TicketsAPIE2ETest {
         // Act
         webTestClient.post()
                 .uri("http://localhost:" + port + "/api/v1/tickets")
-                .header("Authorization", "Bearer " + TestUtil.generateValidJwt())
+                .header("Authorization", "Bearer " + TestUtil.generateValidJwt(userId.toString()))
                 .header("X-Correlation-ID", UUID.randomUUID().toString())
                 .header("Idempotency-Key", UUID.randomUUID().toString())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -135,7 +121,10 @@ public class TicketsAPIE2ETest {
                     assertEquals(request.getDescription(), response.getDescription());
                     assertEquals(projectId.toString(), response.getProjectId());
                     assertEquals(TicketResponse.StatusEnum.OPEN.toString(), response.getStatus().toString());
+                    ticketId = UUID.fromString(response.getTicketId());
                 });
+
+        System.out.println("Looking for ticket with ID: " + ticketId);//temp
 
         // Wait for async processing
         try {
@@ -161,10 +150,8 @@ public class TicketsAPIE2ETest {
     }
 
     @Test
+    @Order(2)
     void assignTicket_WithValidAuth_ShouldReturnOkAndStoreToDB() throws JOSEException {
-
-        // Now assign the ticket
-        UUID assigneeId = UUID.randomUUID();
 
         TicketAssignmentRequest assignRequest = new TicketAssignmentRequest();
         assignRequest.setAssigneeId(assigneeId.toString());
@@ -182,22 +169,60 @@ public class TicketsAPIE2ETest {
                 .value(response -> {
                     assertNotNull(response);
                     assertEquals(ticketId.toString(), response.getTicketId());
+                    assertNotNull(response.getAssignedAt());
                     assertNotNull(response.getAssignee());
-                    assertEquals(assigneeId.toString(), response.getAssignee().getUserId().toString());
+                    assertEquals(assigneeId.toString(), response.getAssignee().getUserId());
+                });
+
+        // Assert - Query real database
+        StepVerifier.create(ticketRepository.findById(ticketId))
+                .assertNext(assignedTicket -> {
+                    assertThat(assignedTicket.getAssigneeId()).isEqualTo(assigneeId);
+                    assertThat(assignedTicket.getSubject()).isEqualTo("Test Ticket");
+                    assertThat(assignedTicket.getDescription()).isEqualTo("This is a test ticket");
+                    assertThat(assignedTicket.getStatus()).isEqualTo(TicketResponse.StatusEnum.OPEN.toString());
+                    assertThat(assignedTicket.getUserId()).isEqualTo(userId);
+                    assertThat(assignedTicket.getProjectId()).isEqualTo(projectId);
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    @Order(3)
+    void updateTicketStatus_WithValidAuth_ShouldReturnOkAndStoreToDB() throws JOSEException {
+
+        String expectedStatus=TicketResponse.StatusEnum.IN_PROGRESS.toString();
+
+        TicketStatusUpdated updateStatus = new TicketStatusUpdated();
+        updateStatus.setStatus(expectedStatus);
+
+        webTestClient.patch()
+                .uri("http://localhost:" + port + "/api/v1/tickets/" + ticketId + "/status")
+                .header("Authorization", "Bearer " + TestUtil.generateValidJwt())
+                .header("X-Correlation-ID", UUID.randomUUID().toString())
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(updateStatus))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(TicketStatusResponse.class)
+                .value(response -> {
+                    assertNotNull(response);
+                    assertEquals(ticketId.toString(), response.getTicketId());
+                    assertEquals(expectedStatus, response.getStatus());
+                    assertNotNull(response.getUpdatedAt());
                 });
 
         // Assert - Query real database
         StepVerifier.create(ticketRepository.findById(ticketId))
                 .assertNext(updatedTicket -> {
-                    assertThat(updatedTicket.getTicketId()).isEqualTo(ticketId);
+                    assertThat(updatedTicket.getStatus()).isEqualTo(expectedStatus);
                     assertThat(updatedTicket.getAssigneeId()).isEqualTo(assigneeId);
                     assertThat(updatedTicket.getSubject()).isEqualTo("Test Ticket");
                     assertThat(updatedTicket.getDescription()).isEqualTo("This is a test ticket");
-                    assertThat(updatedTicket.getStatus()).isEqualTo(TicketResponse.StatusEnum.OPEN.toString());
                     assertThat(updatedTicket.getUserId()).isEqualTo(userId);
                     assertThat(updatedTicket.getProjectId()).isEqualTo(projectId);
                 })
                 .verifyComplete();
-
     }
 }
