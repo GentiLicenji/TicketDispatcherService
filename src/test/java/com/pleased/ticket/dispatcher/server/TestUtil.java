@@ -42,6 +42,31 @@ public class TestUtil {
         return signedJWT.serialize();
     }
 
+    public static String generateValidJwt(String userId) throws JOSEException {
+        // Create the JWT claims
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                .subject(userId)
+                .claim("scope", "read write")
+                .issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + 3600 * 1000 * 5)) // 5 hours
+                .build();
+
+        // Create HMAC signer
+        JWSSigner signer = new MACSigner(SecurityConfig.JWT_SECRET.getBytes());
+
+        // Prepare JWS object
+        SignedJWT signedJWT = new SignedJWT(
+                new JWSHeader(JWSAlgorithm.HS256),
+                claims
+        );
+
+        // Compute the HMAC signature
+        signedJWT.sign(signer);
+
+        // Serialize to compact form
+        return signedJWT.serialize();
+    }
+
     public static String generateInvalidJwt() {
         String header = base64UrlEncode("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes());
 

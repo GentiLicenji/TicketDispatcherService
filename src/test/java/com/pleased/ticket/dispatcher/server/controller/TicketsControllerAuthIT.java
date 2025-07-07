@@ -37,8 +37,10 @@ public class TicketsControllerAuthIT {
 
     @Test
     void testJwtValidation() throws JOSEException {
+        String userId="test-user";
+
         // Generate a token
-        String token = TestUtil.generateValidJwt();
+        String token = TestUtil.generateValidJwt(userId);
         log.info("Generated JWT: {}", token);
 
         // Test the decoder directly using StepVerifier
@@ -52,7 +54,7 @@ public class TicketsControllerAuthIT {
                     log.info("Issued at: {}", jwt.getIssuedAt());
 
                     assertNotNull(jwt);
-                    assertEquals("test-user", jwt.getSubject());
+                    assertEquals(userId, jwt.getSubject());
                     assertTrue(jwt.getClaims().containsKey("scope"));
                 })
                 .verifyComplete();
