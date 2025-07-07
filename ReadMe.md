@@ -195,6 +195,23 @@ To run the application using an external config file:
 java -jar target/TicketDispatcherServer.jar \
   --spring.config.location=file:/path/to/custom/application.properties
 ```
+Got it! Here’s a concise **Option 3** for Docker:
+
+#### Option 3: Using Docker
+
+Build and start the app with Docker:
+
+```bash
+docker build -t ticket-dispatcher-service:2.0 .
+docker compose up -d
+```
+
+Stop the app:
+
+```bash
+docker compose down -v
+```
+Link to detailed readme guide [LoadTestingGuide.md](LoadTestingGuide.md).
 
 ### 🐳 Start Kafka Using Docker Compose
 Link to detailed readme guide [LoadTestingGuide.md](LoadTestingGuide.md).

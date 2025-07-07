@@ -23,6 +23,89 @@
 
 ## ⚙️ Setup Plan
 
+### 0.1 TicketDispatcherServer Docker Image
+Lightweight (\~70MB) Alpine-based container running the Spring Boot TicketDispatcherServer with OpenJDK 8.
+
+* **Base:** Alpine 3.18.4 for minimal size and attack surface
+* **Java:** OpenJDK 8 JRE for running the Spring Boot app
+* **User:** Non-root `spring` user with configurable UID/GID for security
+* **Directories:** `/app/logs`, `/app/tmp`, `/embedded` created with proper ownership
+* **JVM options:** Container-aware flags (`-XX:+UseContainerSupport`, memory limits) for efficient resource use
+* **Config:** Supports `SPRING_PROFILES_ACTIVE` env var for profile management
+* **Ports:** Exposes 8080 for app access
+* **Entrypoint:** Java command with overridable JVM options
+
+### 0.2 🐳 Docker Compose – Ticket Dispatcher Service
+
+<details>
+<summary><strong>📦 Click to view full <code>docker-compose.yml</code></strong></summary>
+
+```yaml
+version: '3.8'
+
+services:
+  ticket-dispatcher:
+    build:
+      dockerfile: Dockerfile
+    container_name: ticket-dispatcher-server
+    image: ticket-dispatcher:latest
+    ports:
+      - "8087:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+    volumes:
+      - app-logs:/app/logs
+      - app-tmp:/app/tmp
+    networks:
+      - ticket-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+        reservations:
+          memory: 256m
+
+volumes:
+  app-logs:
+    driver: local
+  app-tmp:
+    driver: local
+
+networks:
+  ticket-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+```
+
+</details>
+
+---
+
+**Run the service:**
+
+```bash
+docker build -t ticket-dispatcher:latest .
+docker compose up -d
+```
+
+**Stop the service:**
+
+```bash
+docker compose down
+```
+
 ### 1. 🐳 Docker Compose – Single High-Throughput Broker
 
 <details>
