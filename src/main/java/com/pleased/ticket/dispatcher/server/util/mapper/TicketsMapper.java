@@ -31,6 +31,7 @@ public interface TicketsMapper {
 
     // Status mapping methods
     TicketStatusAPIRequest fromRestToAPIStatusRequest(TicketStatusRequest restRequest);
+    @Mapping(source = "ticketID", target = "ticketId", qualifiedByName = "uuidToString")
     TicketStatusResponse fromAPIToRestStatusResponse(TicketStatusAPIResponse apiResponse);
 
     // Details mapping methods

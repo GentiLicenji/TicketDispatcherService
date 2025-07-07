@@ -3,7 +3,6 @@ package com.pleased.ticket.dispatcher.server;
 import com.nimbusds.jose.JOSEException;
 import com.pleased.ticket.dispatcher.server.model.dto.ProjectEntity;
 import com.pleased.ticket.dispatcher.server.model.dto.UserEntity;
-import com.pleased.ticket.dispatcher.server.model.events.TicketStatusUpdated;
 import com.pleased.ticket.dispatcher.server.model.rest.*;
 import com.pleased.ticket.dispatcher.server.repository.ProjectRepository;
 import com.pleased.ticket.dispatcher.server.repository.TicketRepository;
@@ -26,7 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Disabled("To be triggered manually.Integration tests depend on a live Kafka instance (broker) to validate producer/consumer behavior.")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS) //Enforces JUnit 5 to reuse a single instance of the test class for all test methods
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+//Enforces JUnit 5 to reuse a single instance of the test class for all test methods
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class) // Enforces Junit 5 to preserve execution order
 public class TicketsAPIE2ETest {
 
@@ -128,7 +128,7 @@ public class TicketsAPIE2ETest {
 
         // Wait for async processing
         try {
-            Thread.sleep(5000); // 1 second should be enough
+            Thread.sleep(500);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -174,6 +174,13 @@ public class TicketsAPIE2ETest {
                     assertEquals(assigneeId.toString(), response.getAssignee().getUserId());
                 });
 
+        // Wait for async processing by subscribers
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         // Assert - Query real database
         StepVerifier.create(ticketRepository.findById(ticketId))
                 .assertNext(assignedTicket -> {
@@ -191,10 +198,10 @@ public class TicketsAPIE2ETest {
     @Order(3)
     void updateTicketStatus_WithValidAuth_ShouldReturnOkAndStoreToDB() throws JOSEException {
 
-        String expectedStatus=TicketResponse.StatusEnum.IN_PROGRESS.toString();
+        String expectedStatus = TicketResponse.StatusEnum.IN_PROGRESS.toString();
 
-        TicketStatusUpdated updateStatus = new TicketStatusUpdated();
-        updateStatus.setStatus(expectedStatus);
+        TicketStatusRequest updateStatus = new TicketStatusRequest();
+        updateStatus.setStatus(TicketStatusRequest.StatusEnum.fromValue(expectedStatus));
 
         webTestClient.patch()
                 .uri("http://localhost:" + port + "/api/v1/tickets/" + ticketId + "/status")
@@ -209,14 +216,21 @@ public class TicketsAPIE2ETest {
                 .value(response -> {
                     assertNotNull(response);
                     assertEquals(ticketId.toString(), response.getTicketId());
-                    assertEquals(expectedStatus, response.getStatus());
+                    assertEquals(expectedStatus, response.getStatus().toString());
                     assertNotNull(response.getUpdatedAt());
                 });
+
+        // Wait for async processing by subscribers
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
 
         // Assert - Query real database
         StepVerifier.create(ticketRepository.findById(ticketId))
                 .assertNext(updatedTicket -> {
-                    assertThat(updatedTicket.getStatus()).isEqualTo(expectedStatus);
+                    assertThat(updatedTicket.getStatus()).isEqualToIgnoringCase(expectedStatus);
                     assertThat(updatedTicket.getAssigneeId()).isEqualTo(assigneeId);
                     assertThat(updatedTicket.getSubject()).isEqualTo("Test Ticket");
                     assertThat(updatedTicket.getDescription()).isEqualTo("This is a test ticket");

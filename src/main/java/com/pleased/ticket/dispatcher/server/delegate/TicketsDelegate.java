@@ -70,6 +70,26 @@ public class TicketsDelegate {
                 .map(ticketsMapper::fromAPIToRestAssignmentResponse);
     }
 
+    public Mono<TicketStatusResponse> updateTicketStatus(
+            TicketStatusRequest restRequest,
+            String ticketID,
+            String xCorrelationID,
+            String idempotencyKey,
+            String userAgent) {
+
+        // Map REST request to API request
+        TicketStatusAPIRequest apiRequest = ticketsMapper.fromRestToAPIStatusRequest(restRequest);
+
+        // Set additional context information
+        apiRequest.setTicketID(UUID.fromString(ticketID));
+        apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
+        apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
+        apiRequest.setUserAgent(userAgent);
+
+        return ticketsApiService.updateTicketStatus(apiRequest)
+                .map(ticketsMapper::fromAPIToRestStatusResponse);
+    }
+
     public Mono<TicketResponse> updateTicketDetails(
             TicketDetailsRequest restRequest,
             String ticketID,
@@ -92,25 +112,5 @@ public class TicketsDelegate {
 
                     return response;
                 }));
-    }
-
-    public Mono<TicketStatusResponse> updateTicketStatus(
-            TicketStatusRequest restRequest,
-            String ticketID,
-            String xCorrelationID,
-            String idempotencyKey,
-            String userAgent) {
-
-        // Map REST request to API request
-        TicketStatusAPIRequest apiRequest = ticketsMapper.fromRestToAPIStatusRequest(restRequest);
-
-        // Set additional context information
-        apiRequest.setTicketID(UUID.fromString(ticketID));
-        apiRequest.setCorrelationID(UUID.fromString(xCorrelationID));
-        apiRequest.setIdempotencyKey(UUID.fromString(idempotencyKey));
-        apiRequest.setUserAgent(userAgent);
-
-        return ticketsApiService.updateTicketStatus(apiRequest)
-                .map(ticketsMapper::fromAPIToRestStatusResponse);
     }
 }
