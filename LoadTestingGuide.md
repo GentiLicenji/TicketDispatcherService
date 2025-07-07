@@ -183,11 +183,15 @@ To check container runtime, execute this on bash CLI:
 ```
 docker ps
 ```
+To shut down container and remove volumes to reset the state, execute this on bash CLI:
+```
+docker-compose down -v
+```
 ---
 
 ### 2. ⚙️ Spring Boot Config
 Follow producer configurations here: [KafkaProducerConfig](/src/main/java/com/pleased/ticket/dispatcher/server/config/KafkaProducerConfig.java)
-<br>Follow producer configurations here: [KafkaConsumerConfig](/src/main/java/com/pleased/ticket/dispatcher/server/config/KafkaConsumerConfig.java)
+<br>Follow consumer configurations here: [KafkaConsumerConfig](/src/main/java/com/pleased/ticket/dispatcher/server/config/KafkaConsumerConfig.java)
 
 ---
 
@@ -223,7 +227,8 @@ Follow [KafkaTopicConfig](/src/main/java/com/pleased/ticket/dispatcher/server/co
 
 ### 5. 🧩 Use Monitoring Tools (Optional)
 
-* **Kafdrop**: [http://localhost:9000](http://localhost:9000) → View partitions, lag, topic data
+* **Kafka UI**:[http://localhost:8080](http://localhost:8080) → View partitions, lag, topic data etc.
+* **Kafdrop**: [http://localhost:9000](http://localhost:9000) → View partitions, lag, topic data etc.
 * **Kafka CLI**: view offsets, consumer groups, etc.
 
 ---
@@ -234,16 +239,17 @@ With this single-broker setup, you should achieve:
 - Producer: 50K-100K+ messages/second
 - Consumer: 30K-80K+ messages/second
 - Latency: <10ms for end-to-end processing
+//TODO: update above latency calculations.
 
 Monitor via Kafdrop and adjust configurations based on your specific hardware capabilities.
 
 ## 🧠 Summary
 
 | Task            | What to Use                                                 |
-| --------------- | ----------------------------------------------------------- |
+| --------------- |-------------------------------------------------------------|
 | Kafka Cluster   | Docker Compose (3 brokers with Confluent images)            |
 | App Connection  | `localhost:9092,9093,9094`                                  |
 | Load Generation | Spring Boot endpoints + JMeter/Postman, or CLI              |
 | Topic Setup     | Pre-created with 12 partitions, RF=3                        |
-| Monitoring      | Kafdrop, Kafka CLI                                          |
+| Monitoring      | Kafka UI, Kafdrop, Kafka CLI                                |
 | Realistic Load  | 1000s of JSON messages, concurrent consumers, retries, etc. |
