@@ -18,7 +18,6 @@ import reactor.core.publisher.Mono;
 import reactor.kafka.sender.SenderRecord;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
@@ -35,15 +34,15 @@ public class TicketEventProducer {
     }
 
     public Mono<Void> publishTicketCreated(TicketCreated event, UUID correlationId) {
-        return publishEvent(KafkaTopicConfig.TICKET_CREATE_TOPIC, event.getTicketId(), event,correlationId);
+        return publishEvent(KafkaTopicConfig.TICKET_CREATE_TOPIC, event.getTicketId(), event, correlationId);
     }
 
-    public Mono<Void> publishTicketAssigned(TicketAssigned event,UUID correlationId) {
-        return publishEvent(KafkaTopicConfig.TICKET_ASSIGNMENTS_TOPIC, event.getTicketId(), event,correlationId);
+    public Mono<Void> publishTicketAssigned(TicketAssigned event, UUID correlationId) {
+        return publishEvent(KafkaTopicConfig.TICKET_ASSIGNMENTS_TOPIC, event.getTicketId(), event, correlationId);
     }
 
-    public Mono<Void> publishTicketStatusUpdated(TicketStatusUpdated event,UUID correlationId) {
-        return publishEvent(KafkaTopicConfig.TICKET_UPDATES_TOPIC, event.getTicketId(), event,correlationId);
+    public Mono<Void> publishTicketStatusUpdated(TicketStatusUpdated event, UUID correlationId) {
+        return publishEvent(KafkaTopicConfig.TICKET_UPDATES_TOPIC, event.getTicketId(), event, correlationId);
     }
 
     private Mono<Void> publishEvent(String topic, ByteBuffer key, SpecificRecordBase event, UUID correlationId) {
