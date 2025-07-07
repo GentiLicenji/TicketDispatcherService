@@ -1,6 +1,8 @@
 package com.pleased.ticket.dispatcher.server.model.rest;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import io.swagger.annotations.ApiModelProperty;
 import org.springframework.validation.annotation.Validated;
 
@@ -19,8 +21,57 @@ public class TicketStatusResponse   {
   @JsonProperty("ticketId")
   private String ticketId = null;
 
+  /**
+   * Gets or Sets status
+   */
+  public enum StatusEnum {
+    OPEN("open"),
+
+    IN_PROGRESS("in_progress"),
+
+    CLOSED("closed");
+
+    private String value;
+
+    StatusEnum(String value) {
+      this.value = value;
+    }
+
+    @Override
+    @JsonValue
+    public String toString() {
+      return String.valueOf(value);
+    }
+
+    @JsonCreator
+    public static StatusEnum fromValue(String text) {
+      for (StatusEnum b : StatusEnum.values()) {
+        if (String.valueOf(b.value).equals(text)) {
+          return b;
+        }
+      }
+      return null;
+    }
+  }
+
   @JsonProperty("status")
-  private String status = null;
+  private StatusEnum status = null;
+
+  /**
+   * Get status
+   * @return status
+   **/
+  @ApiModelProperty(value = "")
+
+
+  public StatusEnum getStatus() {
+    return status;
+  }
+
+  public void setStatus(StatusEnum status) {
+    this.status = status;
+  }
+
 
   @JsonProperty("updatedAt")
   private OffsetDateTime updatedAt = null;
@@ -43,26 +94,6 @@ public class TicketStatusResponse   {
 
   public void setTicketId(String ticketId) {
     this.ticketId = ticketId;
-  }
-
-  public TicketStatusResponse status(String status) {
-    this.status = status;
-    return this;
-  }
-
-  /**
-   * Get status
-   * @return status
-  **/
-  @ApiModelProperty(value = "")
-
-
-  public String getStatus() {
-    return status;
-  }
-
-  public void setStatus(String status) {
-    this.status = status;
   }
 
   public TicketStatusResponse updatedAt(OffsetDateTime updatedAt) {

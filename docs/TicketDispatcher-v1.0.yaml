@@ -300,6 +300,7 @@ definitions:
         type: string
       status:
         type: string
+        enum: [open,in_progress,resolved,closed]
       updatedAt:
         type: string
         format: date-time

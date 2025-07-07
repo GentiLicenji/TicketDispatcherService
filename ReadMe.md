@@ -5,11 +5,12 @@ Demo project showcasing the capabilities of Gentian Licenji as a Senior Software
 
 #### 🔧 Tech Stack
 
-* **Java + Spring Boot (WebFlux)**
-* **Apache Kafka** for asynchronous messaging
-* **Pluggable idempotency layer** - in-memory Map (dev) → Redis (production)
-* **Reactive Programming** using Project Reactor
-* **JWT authentication** - to be externalized secret via environment configuration
+* **Java + Spring Boot (WebFlux)** – reactive, non-blocking web stack
+* **Apache Kafka** – asynchronous event streaming
+* **R2DBC** – reactive, non-blocking database connectivity (replaces traditional JDBC)
+* **Reactive Programming** – powered by Project Reactor
+* **Pluggable idempotency layer** – in-memory Map (dev) → Redis (production)
+* **JWT authentication** – secret externalized via environment config
 
 #### 🚀 Key API Features
 [View OpenAPI spec](docs/TicketDispatcher-v1.0.yaml)
@@ -19,10 +20,10 @@ Demo project showcasing the capabilities of Gentian Licenji as a Senior Software
 - 🎮 `controller`: API endpoints
 - 🎯 `delegate`: Business logic delegation
 - ⚙️ `service`: Business logic
-- 🔒 `config`: Application configurations
-- ⚠️ `exception`: Error handling
-- 📝 `model`: Data structures
 - 💾 `repository`: Data access
+- ⚠️ `exception`: Error handling
+- 🔒 `config`: Application configurations
+- 📝 `model`: Data structures
 - 🛠️ `util`: Helper classes
 
 This setup reflects modern backend engineering best practices, including **decoupling**, **non-blocking I/O**, and **message-driven communication**.
@@ -60,6 +61,29 @@ Defined in `KafkaTopicConfig`:
 | TicketCreated       | `ticket-create.v1`      | `TicketCreated`       |
 | TicketAssigned      | `ticket-assignments.v1` | `TicketAssigned`      |
 | TicketStatusUpdated | `ticket-updates.v1`     | `TicketStatusUpdated` |
+
+Sure — here’s a concise, professional version for your README:
+
+### 📄 TicketCreated Avro Schema
+
+Represents a newly created ticket event.
+
+* **Namespace:** `com.pleased.ticket.dispatcher.server.model.events`
+* **Type:** `record`
+* **Name:** `TicketCreated`
+
+| Field         | Type                      | Notes                    |
+| ------------- | ------------------------- | ------------------------ |
+| `eventId`     | `bytes` (uuid)            | Event UUID               |
+| `ticketId`    | `bytes` (uuid)            | Ticket UUID              |
+| `subject`     | `string`                  | Ticket title             |
+| `description` | `["null", "string"]`      | Optional description     |
+| `userId`      | `bytes` (uuid)            | Creator's UUID           |
+| `projectId`   | `bytes` (uuid)            | Project UUID             |
+| `createdAt`   | `long` (timestamp-millis) | Creation timestamp (UTC) |
+
+> UUIDs use Avro `bytes` with logicalType `uuid`.
+> Timestamps use `timestamp-millis` for millisecond precision.
 
 ### Producer: `KafkaProducerConfig` & `TicketEventProducer`
 
@@ -126,7 +150,7 @@ reactiveTicketCreatedConsumer.receiveAutoAck()
 This is an asynchronous ticketing system built with **Java 8**, **Spring Boot 2.7.18**, **WebFlux**, and **Kafka**. It uses **Netty** as the embedded server and an **H2 in-memory database**. The REST API is exposed at:
 
 ```
-http://localhost:8080
+http://localhost:8888
 ```
 
 ### ✅ Prerequisites
@@ -140,7 +164,7 @@ http://localhost:8080
 ### 📦 Build the Application
 
 ```bash
-mvn clean install
+mvn clean package
 ```
 
 This will generate the JAR:
@@ -171,6 +195,23 @@ To run the application using an external config file:
 java -jar target/TicketDispatcherServer.jar \
   --spring.config.location=file:/path/to/custom/application.properties
 ```
+Got it! Here’s a concise **Option 3** for Docker:
+
+#### Option 3: Using Docker
+
+Build and start the app with Docker:
+
+```bash
+docker build -t ticket-dispatcher-service:2.0 .
+docker compose up -d
+```
+
+Stop the app:
+
+```bash
+docker compose down -v
+```
+Link to detailed readme guide [LoadTestingGuide.md](LoadTestingGuide.md).
 
 ### 🐳 Start Kafka Using Docker Compose
 Link to detailed readme guide [LoadTestingGuide.md](LoadTestingGuide.md).
@@ -205,16 +246,11 @@ newman run docs/Postman-Test-Suite-TicketDispatcher-v1.0.json \
 ## ⚙️ Load Testing with JMeter
 Link to detailed readme guide [LoadTestingGuide.md](LoadTestingGuide.md).
 
-### 🔍 Access H2 Console
+### 🔍 No access H2 Console
 
-To view the in-memory H2 database:
-
-* URL: `http://localhost:8080/h2-console`
-* JDBC URL: `jdbc:h2:mem:testdb`
-* User: `sa`
-* Password: *(leave blank)*
-
-
+The H2 Console is incompatible with Spring WebFlux because it requires a blocking JDBC connection, 
+<br>whereas WebFlux applications use non-blocking R2DBC drivers that operate on an entirely separate reactive stack.
+<br>**Note:** It is possible only if you're using a live (persistent) H2 instance—such as jdbc:h2:file: or jdbc:h2:tcp:
 ---------
 
 ## 🧪 Tests Included
