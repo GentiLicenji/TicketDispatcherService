@@ -2,7 +2,9 @@ package com.pleased.ticket.dispatcher.server.config;
 
 
 import com.pleased.ticket.dispatcher.server.util.mapper.UUIDConversion;
+import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.specific.SpecificData;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -41,16 +43,13 @@ public class KafkaProducerConfig {
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
 
-        // Schema Registry
-        props.put("schema.registry.url", schemaRegistryUrl);
+        props.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
 
-        // Transaction Configuration
-        props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "reactive-producer-tx");
         props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-        props.put(ProducerConfig.ACKS_CONFIG, "all"); // Required for transactions
-        props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1); // Required for transactions
+        props.put(ProducerConfig.ACKS_CONFIG, "all"); // Required for safe, durable writes without transactions
+        props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
 
-        // Performance tuning (adjusted for transactions)
+        // Performance tuning
         props.put(ProducerConfig.BATCH_SIZE_CONFIG, 131072);
         props.put(ProducerConfig.LINGER_MS_CONFIG, 5);
         props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 67108864);
@@ -71,8 +70,8 @@ public class KafkaProducerConfig {
 
         // Transactional reactive configurations
         senderOptions = senderOptions
-                .maxInFlight(256) // Lower for transactional
-                .stopOnError(true) // Stop on error for transactional integrity
+                .maxInFlight(1024)  // Higher for non-transactional
+                .stopOnError(false) // Don't stop on error
                 .scheduler(Schedulers.boundedElastic());
 
         return new ReactiveKafkaProducerTemplate<>(senderOptions);
