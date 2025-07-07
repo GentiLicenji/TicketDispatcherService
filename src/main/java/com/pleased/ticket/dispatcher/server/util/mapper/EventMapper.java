@@ -18,8 +18,6 @@ public interface EventMapper {
 
     // TicketCreated mapping
     @Mapping(target = "eventId", source = "request.idempotencyKey", qualifiedByName = "uuidToBytes")
-    @Mapping(target = "eventType", constant = "TicketCreated")
-    @Mapping(target = "timestamp", expression = "java(java.time.Instant.now())")
     @Mapping(target = "ticketId", source = "ticketId", qualifiedByName = "uuidToBytes")
     @Mapping(target = "subject", source = "request.subject")
     @Mapping(target = "description", source = "request.description")
@@ -30,8 +28,6 @@ public interface EventMapper {
 
     // Alternative with separate createdAt parameter
     @Mapping(target = "eventId", source = "request.idempotencyKey", qualifiedByName = "uuidToBytes")
-    @Mapping(target = "eventType", constant = "TicketCreated")
-    @Mapping(target = "timestamp", expression = "java(java.time.Instant.now())")
     @Mapping(target = "ticketId", source = "ticketId", qualifiedByName = "uuidToBytes")
     @Mapping(target = "subject", source = "request.subject")
     @Mapping(target = "description", source = "request.description")
@@ -42,8 +38,6 @@ public interface EventMapper {
 
     // TicketStatusUpdated mapping
     @Mapping(target = "eventId", source = "request.idempotencyKey", qualifiedByName = "uuidToBytes")
-    @Mapping(target = "eventType", constant = "TicketStatusUpdated")
-    @Mapping(target = "timestamp", expression = "java(java.time.Instant.now())")
     @Mapping(target = "ticketId", source = "request.ticketID", qualifiedByName = "uuidToBytes")
     @Mapping(target = "status", source = "request.status")
     @Mapping(target = "updatedAt", expression = "java(java.time.Instant.now())")
@@ -51,8 +45,6 @@ public interface EventMapper {
 
     // Alternative with separate updatedAt parameter
     @Mapping(target = "eventId", source = "request.idempotencyKey", qualifiedByName = "uuidToBytes")
-    @Mapping(target = "eventType", constant = "TicketStatusUpdated")
-    @Mapping(target = "timestamp", expression = "java(java.time.Instant.now())")
     @Mapping(target = "ticketId", source = "request.ticketID", qualifiedByName = "uuidToBytes")
     @Mapping(target = "status", source = "request.status")
     @Mapping(target = "updatedAt", source = "updatedAt")
@@ -60,8 +52,6 @@ public interface EventMapper {
 
     // TicketAssigned mapping
     @Mapping(target = "eventId", source = "request.idempotencyKey", qualifiedByName = "uuidToBytes")
-    @Mapping(target = "eventType", constant = "TicketAssigned")
-    @Mapping(target = "timestamp", expression = "java(java.time.Instant.now())")
     @Mapping(target = "ticketId", source = "request.ticketID", qualifiedByName = "uuidToBytes")
     @Mapping(target = "assigneeId", source = "request.assigneeId", qualifiedByName = "uuidToBytes")
     @Mapping(target = "assignedAt", expression = "java(java.time.Instant.now())")
@@ -69,8 +59,6 @@ public interface EventMapper {
 
     // Alternative with separate assignedAt parameter
     @Mapping(target = "eventId", source = "request.idempotencyKey", qualifiedByName = "uuidToBytes")
-    @Mapping(target = "eventType", constant = "TicketAssigned")
-    @Mapping(target = "timestamp", expression = "java(java.time.Instant.now())")
     @Mapping(target = "ticketId", source = "request.ticketID", qualifiedByName = "uuidToBytes")
     @Mapping(target = "assigneeId", source = "request.assigneeId", qualifiedByName = "uuidToBytes")
     @Mapping(target = "assignedAt", source = "assignedAt")

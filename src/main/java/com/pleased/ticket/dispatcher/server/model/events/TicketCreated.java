@@ -12,8 +12,8 @@ import org.apache.avro.specific.SpecificData;
 
 @org.apache.avro.specific.AvroGenerated
 public class TicketCreated extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -7835740324351625315L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TicketCreated\",\"namespace\":\"com.pleased.ticket.dispatcher.server.model.events\",\"fields\":[{\"name\":\"eventId\",\"type\":{\"type\":\"bytes\",\"logicalType\":\"uuid\"}},{\"name\":\"eventType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"timestamp\",\"type\":{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}},{\"name\":\"ticketId\",\"type\":{\"type\":\"bytes\",\"logicalType\":\"uuid\"}},{\"name\":\"subject\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"description\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"default\":null},{\"name\":\"userId\",\"type\":{\"type\":\"bytes\",\"logicalType\":\"uuid\"}},{\"name\":\"projectId\",\"type\":{\"type\":\"bytes\",\"logicalType\":\"uuid\"}},{\"name\":\"createdAt\",\"type\":{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}}]}");
+  private static final long serialVersionUID = -2712125024568839775L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TicketCreated\",\"namespace\":\"com.pleased.ticket.dispatcher.server.model.events\",\"fields\":[{\"name\":\"eventId\",\"type\":{\"type\":\"bytes\",\"logicalType\":\"uuid\"}},{\"name\":\"ticketId\",\"type\":{\"type\":\"bytes\",\"logicalType\":\"uuid\"}},{\"name\":\"subject\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"description\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"default\":null},{\"name\":\"userId\",\"type\":{\"type\":\"bytes\",\"logicalType\":\"uuid\"}},{\"name\":\"projectId\",\"type\":{\"type\":\"bytes\",\"logicalType\":\"uuid\"}},{\"name\":\"createdAt\",\"type\":{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -73,8 +73,6 @@ static {
   }
 
    private java.nio.ByteBuffer eventId;
-   private java.lang.String eventType;
-   private java.time.Instant timestamp;
    private java.nio.ByteBuffer ticketId;
    private java.lang.String subject;
    private java.lang.String description;
@@ -92,8 +90,6 @@ static {
   /**
    * All-args constructor.
    * @param eventId The new value for eventId
-   * @param eventType The new value for eventType
-   * @param timestamp The new value for timestamp
    * @param ticketId The new value for ticketId
    * @param subject The new value for subject
    * @param description The new value for description
@@ -101,10 +97,8 @@ static {
    * @param projectId The new value for projectId
    * @param createdAt The new value for createdAt
    */
-  public TicketCreated(java.nio.ByteBuffer eventId, java.lang.String eventType, java.time.Instant timestamp, java.nio.ByteBuffer ticketId, java.lang.String subject, java.lang.String description, java.nio.ByteBuffer userId, java.nio.ByteBuffer projectId, java.time.Instant createdAt) {
+  public TicketCreated(java.nio.ByteBuffer eventId, java.nio.ByteBuffer ticketId, java.lang.String subject, java.lang.String description, java.nio.ByteBuffer userId, java.nio.ByteBuffer projectId, java.time.Instant createdAt) {
     this.eventId = eventId;
-    this.eventType = eventType;
-    this.timestamp = timestamp.truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
     this.ticketId = ticketId;
     this.subject = subject;
     this.description = description;
@@ -119,14 +113,12 @@ static {
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return eventId;
-    case 1: return eventType;
-    case 2: return timestamp;
-    case 3: return ticketId;
-    case 4: return subject;
-    case 5: return description;
-    case 6: return userId;
-    case 7: return projectId;
-    case 8: return createdAt;
+    case 1: return ticketId;
+    case 2: return subject;
+    case 3: return description;
+    case 4: return userId;
+    case 5: return projectId;
+    case 6: return createdAt;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -134,8 +126,6 @@ static {
   private static final org.apache.avro.Conversion<?>[] conversions =
       new org.apache.avro.Conversion<?>[] {
       null,
-      null,
-      new org.apache.avro.data.TimeConversions.TimestampMillisConversion(),
       null,
       null,
       null,
@@ -155,14 +145,12 @@ static {
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: eventId = (java.nio.ByteBuffer)value$; break;
-    case 1: eventType = value$ != null ? value$.toString() : null; break;
-    case 2: timestamp = (java.time.Instant)value$; break;
-    case 3: ticketId = (java.nio.ByteBuffer)value$; break;
-    case 4: subject = value$ != null ? value$.toString() : null; break;
-    case 5: description = value$ != null ? value$.toString() : null; break;
-    case 6: userId = (java.nio.ByteBuffer)value$; break;
-    case 7: projectId = (java.nio.ByteBuffer)value$; break;
-    case 8: createdAt = (java.time.Instant)value$; break;
+    case 1: ticketId = (java.nio.ByteBuffer)value$; break;
+    case 2: subject = value$ != null ? value$.toString() : null; break;
+    case 3: description = value$ != null ? value$.toString() : null; break;
+    case 4: userId = (java.nio.ByteBuffer)value$; break;
+    case 5: projectId = (java.nio.ByteBuffer)value$; break;
+    case 6: createdAt = (java.time.Instant)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -182,40 +170,6 @@ static {
    */
   public void setEventId(java.nio.ByteBuffer value) {
     this.eventId = value;
-  }
-
-  /**
-   * Gets the value of the 'eventType' field.
-   * @return The value of the 'eventType' field.
-   */
-  public java.lang.String getEventType() {
-    return eventType;
-  }
-
-
-  /**
-   * Sets the value of the 'eventType' field.
-   * @param value the value to set.
-   */
-  public void setEventType(java.lang.String value) {
-    this.eventType = value;
-  }
-
-  /**
-   * Gets the value of the 'timestamp' field.
-   * @return The value of the 'timestamp' field.
-   */
-  public java.time.Instant getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * @param value the value to set.
-   */
-  public void setTimestamp(java.time.Instant value) {
-    this.timestamp = value.truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
   }
 
   /**
@@ -362,8 +316,6 @@ static {
     implements org.apache.avro.data.RecordBuilder<TicketCreated> {
 
     private java.nio.ByteBuffer eventId;
-    private java.lang.String eventType;
-    private java.time.Instant timestamp;
     private java.nio.ByteBuffer ticketId;
     private java.lang.String subject;
     private java.lang.String description;
@@ -386,37 +338,29 @@ static {
         this.eventId = data().deepCopy(fields()[0].schema(), other.eventId);
         fieldSetFlags()[0] = other.fieldSetFlags()[0];
       }
-      if (isValidValue(fields()[1], other.eventType)) {
-        this.eventType = data().deepCopy(fields()[1].schema(), other.eventType);
+      if (isValidValue(fields()[1], other.ticketId)) {
+        this.ticketId = data().deepCopy(fields()[1].schema(), other.ticketId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[2].schema(), other.timestamp);
+      if (isValidValue(fields()[2], other.subject)) {
+        this.subject = data().deepCopy(fields()[2].schema(), other.subject);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.ticketId)) {
-        this.ticketId = data().deepCopy(fields()[3].schema(), other.ticketId);
+      if (isValidValue(fields()[3], other.description)) {
+        this.description = data().deepCopy(fields()[3].schema(), other.description);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.subject)) {
-        this.subject = data().deepCopy(fields()[4].schema(), other.subject);
+      if (isValidValue(fields()[4], other.userId)) {
+        this.userId = data().deepCopy(fields()[4].schema(), other.userId);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.description)) {
-        this.description = data().deepCopy(fields()[5].schema(), other.description);
+      if (isValidValue(fields()[5], other.projectId)) {
+        this.projectId = data().deepCopy(fields()[5].schema(), other.projectId);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.userId)) {
-        this.userId = data().deepCopy(fields()[6].schema(), other.userId);
+      if (isValidValue(fields()[6], other.createdAt)) {
+        this.createdAt = data().deepCopy(fields()[6].schema(), other.createdAt);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
-      }
-      if (isValidValue(fields()[7], other.projectId)) {
-        this.projectId = data().deepCopy(fields()[7].schema(), other.projectId);
-        fieldSetFlags()[7] = other.fieldSetFlags()[7];
-      }
-      if (isValidValue(fields()[8], other.createdAt)) {
-        this.createdAt = data().deepCopy(fields()[8].schema(), other.createdAt);
-        fieldSetFlags()[8] = other.fieldSetFlags()[8];
       }
     }
 
@@ -430,37 +374,29 @@ static {
         this.eventId = data().deepCopy(fields()[0].schema(), other.eventId);
         fieldSetFlags()[0] = true;
       }
-      if (isValidValue(fields()[1], other.eventType)) {
-        this.eventType = data().deepCopy(fields()[1].schema(), other.eventType);
+      if (isValidValue(fields()[1], other.ticketId)) {
+        this.ticketId = data().deepCopy(fields()[1].schema(), other.ticketId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[2].schema(), other.timestamp);
+      if (isValidValue(fields()[2], other.subject)) {
+        this.subject = data().deepCopy(fields()[2].schema(), other.subject);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.ticketId)) {
-        this.ticketId = data().deepCopy(fields()[3].schema(), other.ticketId);
+      if (isValidValue(fields()[3], other.description)) {
+        this.description = data().deepCopy(fields()[3].schema(), other.description);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.subject)) {
-        this.subject = data().deepCopy(fields()[4].schema(), other.subject);
+      if (isValidValue(fields()[4], other.userId)) {
+        this.userId = data().deepCopy(fields()[4].schema(), other.userId);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.description)) {
-        this.description = data().deepCopy(fields()[5].schema(), other.description);
+      if (isValidValue(fields()[5], other.projectId)) {
+        this.projectId = data().deepCopy(fields()[5].schema(), other.projectId);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.userId)) {
-        this.userId = data().deepCopy(fields()[6].schema(), other.userId);
+      if (isValidValue(fields()[6], other.createdAt)) {
+        this.createdAt = data().deepCopy(fields()[6].schema(), other.createdAt);
         fieldSetFlags()[6] = true;
-      }
-      if (isValidValue(fields()[7], other.projectId)) {
-        this.projectId = data().deepCopy(fields()[7].schema(), other.projectId);
-        fieldSetFlags()[7] = true;
-      }
-      if (isValidValue(fields()[8], other.createdAt)) {
-        this.createdAt = data().deepCopy(fields()[8].schema(), other.createdAt);
-        fieldSetFlags()[8] = true;
       }
     }
 
@@ -505,85 +441,6 @@ static {
     }
 
     /**
-      * Gets the value of the 'eventType' field.
-      * @return The value.
-      */
-    public java.lang.String getEventType() {
-      return eventType;
-    }
-
-
-    /**
-      * Sets the value of the 'eventType' field.
-      * @param value The value of 'eventType'.
-      * @return This builder.
-      */
-    public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder setEventType(java.lang.String value) {
-      validate(fields()[1], value);
-      this.eventType = value;
-      fieldSetFlags()[1] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'eventType' field has been set.
-      * @return True if the 'eventType' field has been set, false otherwise.
-      */
-    public boolean hasEventType() {
-      return fieldSetFlags()[1];
-    }
-
-
-    /**
-      * Clears the value of the 'eventType' field.
-      * @return This builder.
-      */
-    public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder clearEventType() {
-      eventType = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'timestamp' field.
-      * @return The value.
-      */
-    public java.time.Instant getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder setTimestamp(java.time.Instant value) {
-      validate(fields()[2], value);
-      this.timestamp = value.truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
-      fieldSetFlags()[2] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[2];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * @return This builder.
-      */
-    public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder clearTimestamp() {
-      fieldSetFlags()[2] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'ticketId' field.
       * @return The value.
       */
@@ -598,9 +455,9 @@ static {
       * @return This builder.
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder setTicketId(java.nio.ByteBuffer value) {
-      validate(fields()[3], value);
+      validate(fields()[1], value);
       this.ticketId = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[1] = true;
       return this;
     }
 
@@ -609,7 +466,7 @@ static {
       * @return True if the 'ticketId' field has been set, false otherwise.
       */
     public boolean hasTicketId() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[1];
     }
 
 
@@ -619,7 +476,7 @@ static {
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder clearTicketId() {
       ticketId = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[1] = false;
       return this;
     }
 
@@ -638,9 +495,9 @@ static {
       * @return This builder.
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder setSubject(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[2], value);
       this.subject = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -649,7 +506,7 @@ static {
       * @return True if the 'subject' field has been set, false otherwise.
       */
     public boolean hasSubject() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[2];
     }
 
 
@@ -659,7 +516,7 @@ static {
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder clearSubject() {
       subject = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -678,9 +535,9 @@ static {
       * @return This builder.
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder setDescription(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[3], value);
       this.description = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -689,7 +546,7 @@ static {
       * @return True if the 'description' field has been set, false otherwise.
       */
     public boolean hasDescription() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[3];
     }
 
 
@@ -699,7 +556,7 @@ static {
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder clearDescription() {
       description = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -718,9 +575,9 @@ static {
       * @return This builder.
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder setUserId(java.nio.ByteBuffer value) {
-      validate(fields()[6], value);
+      validate(fields()[4], value);
       this.userId = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -729,7 +586,7 @@ static {
       * @return True if the 'userId' field has been set, false otherwise.
       */
     public boolean hasUserId() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[4];
     }
 
 
@@ -739,7 +596,7 @@ static {
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder clearUserId() {
       userId = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -758,9 +615,9 @@ static {
       * @return This builder.
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder setProjectId(java.nio.ByteBuffer value) {
-      validate(fields()[7], value);
+      validate(fields()[5], value);
       this.projectId = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -769,7 +626,7 @@ static {
       * @return True if the 'projectId' field has been set, false otherwise.
       */
     public boolean hasProjectId() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[5];
     }
 
 
@@ -779,7 +636,7 @@ static {
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder clearProjectId() {
       projectId = null;
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -798,9 +655,9 @@ static {
       * @return This builder.
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder setCreatedAt(java.time.Instant value) {
-      validate(fields()[8], value);
+      validate(fields()[6], value);
       this.createdAt = value.truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
-      fieldSetFlags()[8] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -809,7 +666,7 @@ static {
       * @return True if the 'createdAt' field has been set, false otherwise.
       */
     public boolean hasCreatedAt() {
-      return fieldSetFlags()[8];
+      return fieldSetFlags()[6];
     }
 
 
@@ -818,7 +675,7 @@ static {
       * @return This builder.
       */
     public com.pleased.ticket.dispatcher.server.model.events.TicketCreated.Builder clearCreatedAt() {
-      fieldSetFlags()[8] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -828,14 +685,12 @@ static {
       try {
         TicketCreated record = new TicketCreated();
         record.eventId = fieldSetFlags()[0] ? this.eventId : (java.nio.ByteBuffer) defaultValue(fields()[0]);
-        record.eventType = fieldSetFlags()[1] ? this.eventType : (java.lang.String) defaultValue(fields()[1]);
-        record.timestamp = fieldSetFlags()[2] ? this.timestamp : (java.time.Instant) defaultValue(fields()[2]);
-        record.ticketId = fieldSetFlags()[3] ? this.ticketId : (java.nio.ByteBuffer) defaultValue(fields()[3]);
-        record.subject = fieldSetFlags()[4] ? this.subject : (java.lang.String) defaultValue(fields()[4]);
-        record.description = fieldSetFlags()[5] ? this.description : (java.lang.String) defaultValue(fields()[5]);
-        record.userId = fieldSetFlags()[6] ? this.userId : (java.nio.ByteBuffer) defaultValue(fields()[6]);
-        record.projectId = fieldSetFlags()[7] ? this.projectId : (java.nio.ByteBuffer) defaultValue(fields()[7]);
-        record.createdAt = fieldSetFlags()[8] ? this.createdAt : (java.time.Instant) defaultValue(fields()[8]);
+        record.ticketId = fieldSetFlags()[1] ? this.ticketId : (java.nio.ByteBuffer) defaultValue(fields()[1]);
+        record.subject = fieldSetFlags()[2] ? this.subject : (java.lang.String) defaultValue(fields()[2]);
+        record.description = fieldSetFlags()[3] ? this.description : (java.lang.String) defaultValue(fields()[3]);
+        record.userId = fieldSetFlags()[4] ? this.userId : (java.nio.ByteBuffer) defaultValue(fields()[4]);
+        record.projectId = fieldSetFlags()[5] ? this.projectId : (java.nio.ByteBuffer) defaultValue(fields()[5]);
+        record.createdAt = fieldSetFlags()[6] ? this.createdAt : (java.time.Instant) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
