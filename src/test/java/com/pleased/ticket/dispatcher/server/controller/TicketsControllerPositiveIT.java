@@ -1,16 +1,24 @@
 package com.pleased.ticket.dispatcher.server.controller;
 
+import com.nimbusds.jose.JOSEException;
+import com.pleased.ticket.dispatcher.server.TestUtil;
 import com.pleased.ticket.dispatcher.server.config.DisableSecurityConfig;
 import com.pleased.ticket.dispatcher.server.delegate.TicketsDelegate;
 import com.pleased.ticket.dispatcher.server.exception.GlobalExceptionHandler;
 import com.pleased.ticket.dispatcher.server.filter.CorrelationIdFilter;
 import com.pleased.ticket.dispatcher.server.filter.IdempotencyFilter;
+import com.pleased.ticket.dispatcher.server.filter.JwtAuthenticationFilter;
 import com.pleased.ticket.dispatcher.server.filter.LoggingFilter;
+import com.pleased.ticket.dispatcher.server.model.events.TicketCreated;
 import com.pleased.ticket.dispatcher.server.model.rest.TicketCreateRequest;
 import com.pleased.ticket.dispatcher.server.model.rest.TicketResponse;
 import com.pleased.ticket.dispatcher.server.service.TicketEventProducer;
 import com.pleased.ticket.dispatcher.server.service.TicketsApiService;
+import com.pleased.ticket.dispatcher.server.util.mapper.EventMapper;
+import com.pleased.ticket.dispatcher.server.util.mapper.EventMapperImpl;
 import com.pleased.ticket.dispatcher.server.util.mapper.TicketsMapperImpl;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,21 +29,25 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.reactive.function.BodyInserters;
+import reactor.core.publisher.Mono;
+import reactor.kafka.sender.SenderRecord;
+import reactor.kafka.sender.SenderResult;
 
+import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,14 +61,15 @@ import static org.mockito.Mockito.when;
         CorrelationIdFilter.class,
         IdempotencyFilter.class,
         LoggingFilter.class,
+        JwtAuthenticationFilter.class,
         GlobalExceptionHandler.class,
         DisableSecurityConfig.class})
 @AutoConfigureWebTestClient
-@Import({TicketsMapperImpl.class}) // import the generated impl class
+@Import({TicketsMapperImpl.class, EventMapperImpl.class}) // import the generated impl class
 public class TicketsControllerPositiveIT {
 
     @MockBean
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private TicketEventProducer ticketEventProducer;
 
     @Autowired
     private WebTestClient webTestClient;
@@ -79,19 +92,12 @@ public class TicketsControllerPositiveIT {
     @BeforeEach
     void setUpEach() {
         // Create mocks
-        ListenableFuture<SendResult<String, Object>> listenableFuture = mock(ListenableFuture.class);
-        CompletableFuture<SendResult<String, Object>> completableFuture =
-                CompletableFuture.completedFuture(mock(SendResult.class));
-
-        // Mock the chain
-        when(kafkaTemplate.send(anyString(), anyString(), any()))
-                .thenReturn(listenableFuture);
-        when(listenableFuture.completable())
-                .thenReturn(completableFuture);
+        when(ticketEventProducer.publishTicketCreated(any(TicketCreated.class), eq(correlationId)))
+                .thenReturn(Mono.empty());
     }
 
     @Test
-    void createTicket_withValidPayload_ShouldReturnCorrectResponse() {
+    void createTicket_withValidPayload_ShouldReturnCorrectResponse() throws JOSEException {
 
         TicketCreateRequest request = new TicketCreateRequest();
         request.setSubject("Test Ticket");
@@ -101,7 +107,7 @@ public class TicketsControllerPositiveIT {
         // Act
         webTestClient.post()
                 .uri("/api/v1/tickets")
-                .header("Authorization", "dummy auth")
+                .header("Authorization", "Bearer "+TestUtil.generateValidJwt())
                 .header("X-Correlation-ID", correlationId.toString())
                 .header("Idempotency-Key", ticketId.toString())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -122,7 +128,7 @@ public class TicketsControllerPositiveIT {
 
 
     @Test
-    void createTicket_WithDuplicateIdempotencyKey_ShouldReturnSameResponse() {
+    void createTicket_WithDuplicateIdempotencyKey_ShouldReturnSameResponse() throws JOSEException {
 
         TicketCreateRequest request = new TicketCreateRequest();
         request.setSubject("Test Ticket for Deduplication");
@@ -132,7 +138,7 @@ public class TicketsControllerPositiveIT {
         // Act - First request
         TicketResponse firstResponse = webTestClient.post()
                 .uri("/api/v1/tickets")
-                .header("Authorization", "dummy auth")
+                .header("Authorization", "Bearer "+TestUtil.generateValidJwt())
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(request))
@@ -145,7 +151,7 @@ public class TicketsControllerPositiveIT {
         // Act - Second request with same idempotency key
         TicketResponse secondResponse = webTestClient.post()
                 .uri("/api/v1/tickets")
-                .header("Authorization", "dummy auth")
+                .header("Authorization", "Bearer "+TestUtil.generateValidJwt())
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(request))
