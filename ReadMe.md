@@ -247,10 +247,10 @@ newman run docs/Postman-Test-Suite-TicketDispatcher-v1.0.json \
 Link to detailed readme guide [LoadTestingGuide.md](LoadTestingGuide.md).
 
 ### 🔍 No access H2 Console
-
 The H2 Console is incompatible with Spring WebFlux because it requires a blocking JDBC connection, 
 <br>whereas WebFlux applications use non-blocking R2DBC drivers that operate on an entirely separate reactive stack.
 <br>**Note:** It is possible only if you're using a live (persistent) H2 instance—such as jdbc:h2:file: or jdbc:h2:tcp:
+
 ---------
 
 ## 🧪 Tests Included
